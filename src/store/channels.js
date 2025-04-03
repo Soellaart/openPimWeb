@@ -57,7 +57,7 @@ const actions = {
   },
   loadAllChannelsWithMapping: async () => {
     if (!chanPromiseAll) {
-      chanPromiseAll = serverFetch('query { getChannels {id identifier name order group active type valid visible config mappings runtime parentId createdAt createdBy updatedAt updatedBy} }')
+      chanPromiseAll = serverFetch('query { getChannels {id identifier name order group active type valid visible config mappings headerMappings runtime parentId createdAt createdBy updatedAt updatedBy} }')
     }
     const data = await chanPromiseAll
     const readingTime = new Date().toISOString()
@@ -236,7 +236,7 @@ const actions = {
     const offset = (options.page - 1) * options.itemsPerPage
     const order = generateSorting(options)
     const includeLog = options.log ? ', log' : ''
-    const data = await serverFetch('query { getExecutions(channelId: "' + channelId + '", offset: ' + offset + ', limit: ' + options.itemsPerPage + ', order: ' + objectToGraphgl(order) + `) { 
+    const data = await serverFetch('query { getExecutions(channelId: "' + channelId + '", offset: ' + offset + ', limit: ' + options.itemsPerPage + ', order: ' + objectToGraphgl(order) + `) {
       count, rows {id, status, startTime, finishTime, storagePath ${includeLog} }}}`)
     return data.getExecutions
   },

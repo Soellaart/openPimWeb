@@ -7,7 +7,7 @@ const importConfigs = reactive([])
 const actions = {
   loadAllImportConfigs: async () => {
     if (importConfigs.length > 0) return importConfigs
-    const data = await serverFetch('query { getImportConfigs {id identifier name type filedata config mappings createdAt createdBy updatedAt updatedBy} }')
+    const data = await serverFetch('query { getImportConfigs {id identifier name type filedata config mappings headerMapping createdAt createdBy updatedAt updatedBy} }')
     if (importConfigs.length > 0) return importConfigs
     if (data.getImportConfigs) {
       data.getImportConfigs.forEach(element => {
@@ -25,7 +25,7 @@ const actions = {
     }
     if (importsConfig.internalId === 0) {
       const query = `
-        mutation($config: JSONObject, $mappings: JSON, $filedata: JSONObject) { createImportConfig(identifier: "` + importsConfig.identifier + '", name: ' + objectToGraphgl(importsConfig.name) +
+        mutation($config: JSONObject, $mappings: JSON, $headerMappings: JSON. $filedata: JSONObject) { createImportConfig(identifier: "` + importsConfig.identifier + '", name: ' + objectToGraphgl(importsConfig.name) +
         ', type: ' + importsConfig.type +
         ', mappings: $mappings, filedata: $filedata, config: $config' +
         `)
