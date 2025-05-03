@@ -78,7 +78,7 @@
         </v-list>
       </v-col>
       <v-col cols="9" lg="10" xl="10">
-        <v-form ref="formRef" lazy-validation class="ml-7" v-if="selectedRef && selectedRef.id != -1">
+        <v-form ref="formRef" lazy-validation class="ml-7" v-if="selectedRef && selectedRef.id !== -1">
           <div class="d-inline-flex align-center">
             <v-text-field style="min-width: 100%" v-model="selectedRef.identifier" :disabled="selectedRef.internalId !== 0" :rules="identifierRules" :label="$t('Config.Channels.Identifier')" required></v-text-field>
             <SystemInformation :data="selectedRef"></SystemInformation>
@@ -145,7 +145,7 @@
                 </template>
               </v-radio-group>
 
-              <v-select v-if="(selectedRef.config.start && selectedRef.config.start != 1) || (selectedRef.config.syncStart && selectedRef.config.syncStart != 1)" v-model="selectedRef.config.language" :items="languages" :readonly="!canEditConfigRef" :label="$t('Config.Channels.Language')" item-text="name.ru" item-value='identifier' clearable></v-select>
+              <v-select v-if="(selectedRef.config.start && selectedRef.config.start !== 1) || (selectedRef.config.syncStart && selectedRef.config.syncStart !== 1)" v-model="selectedRef.config.language" :items="languages" :readonly="!canEditConfigRef" :label="$t('Config.Channels.Language')" item-text="name.ru" item-value='identifier' clearable></v-select>
 
               <ValidVisibleComponent :elem="selectedRef" :canEditConfig="canEditConfigRef"/>
 
@@ -195,10 +195,11 @@ import ExtMapConfigCompoment from '../../channels/extmap/ExtMapConfigCompoment'
 import MDMConfigCompoment from '../../channels/mdm/MDMConfigComponent'
 import MDMExtConfigCompoment from '../../channels/mdmExt/MDMExtConfigComponent'
 import XLSTemplConfigCompoment from '../../channels/xlsTemplate/XLSTemplConfigCompoment.vue'
+import FtpConfigCompoment from '../../channels/ftp/FtpConfigCompoment.vue'
 import OptionsTable from '../../components/OptionsTable'
 
 export default {
-  components: { LanguageDependentField, SystemInformation, ExtConfigCompoment, WBConfigCompoment, ValidVisibleComponent, OzonConfigCompoment, YMConfigCompoment, ExtMapConfigCompoment, MDMConfigCompoment, MDMExtConfigCompoment, XLSTemplConfigCompoment, OptionsTable },
+  components: { LanguageDependentField, SystemInformation, ExtConfigCompoment, WBConfigCompoment, ValidVisibleComponent, OzonConfigCompoment, YMConfigCompoment, ExtMapConfigCompoment, MDMConfigCompoment, MDMExtConfigCompoment, XLSTemplConfigCompoment, FtpConfigCompoment, OptionsTable },
   setup (props, { root }) {
     const { canViewConfig, canEditConfig } = userStore.useStore()
     const {
@@ -479,7 +480,8 @@ export default {
       { value: 5, text: i18n.t('Channels.Type.ExternalWithMapping') },
       { value: 6, text: i18n.t('Channels.Type.MDM') },
       { value: 7, text: i18n.t('Channels.Type.ExcelTemplate') },
-      { value: 8, text: i18n.t('Channels.Type.MDM.External') }
+      { value: 8, text: i18n.t('Channels.Type.MDM.External') },
+      { value: 9, text: i18n.t('Channels.Type.FTP') }
     ])
 
     function optionsChanged (val) {

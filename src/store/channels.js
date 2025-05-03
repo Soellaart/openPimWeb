@@ -1,9 +1,9 @@
-import { reactive, provide, inject } from '@vue/composition-api'
-import i18n from '../i18n'
-import { serverFetch, objectToGraphgl, generateSorting } from './utils'
-import { currentLanguage } from './languages'
-import * as userStore from './users'
-import * as err from './error'
+import { inject, provide, reactive } from '@vue/composition-api';
+import i18n from '../i18n';
+import { generateSorting, objectToGraphgl, serverFetch } from './utils';
+import { currentLanguage } from './languages';
+import * as userStore from './users';
+import * as err from './error';
 
 const channels = reactive([])
 const channelTypes = reactive([])
@@ -57,7 +57,7 @@ const actions = {
   },
   loadAllChannelsWithMapping: async () => {
     if (!chanPromiseAll) {
-      chanPromiseAll = serverFetch('query { getChannels {id identifier name order group active type valid visible config mappings headerMappings runtime parentId createdAt createdBy updatedAt updatedBy} }')
+      chanPromiseAll = serverFetch('query { getChannels {id identifier name order group active type valid visible config mappings headermappings runtime parentId createdAt createdBy updatedAt updatedBy} }')
     }
     const data = await chanPromiseAll
     const readingTime = new Date().toISOString()
@@ -110,8 +110,7 @@ const actions = {
       }
 
       const data = await serverFetch(query, variables)
-      const newId = parseInt(data.createChannel)
-      channel.internalId = newId
+      channel.internalId = parseInt(data.createChannel)
     } else {
       const query = `
         mutation($config: JSONObject, $mappings: JSONObject) { updateChannel(id: "` + channel.internalId + '", name: ' + (channel.name ? '' + objectToGraphgl(channel.name) : '') +
