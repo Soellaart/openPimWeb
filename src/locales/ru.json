@@ -586,6 +586,7 @@
   "Channels.Type.MDM": "Master data",
   "Channels.Type.MDM.External": "Master data (внешний)",
   "Channels.Type.ExcelTemplate": "Шаблон Excel",
+  "Channels.Type.FTP": "FTP/SFTP",
   "Channels.SelectionDialog.Title": "Выбор каналов",
   "ChannelView.Dashboard": "Дашборд",
   "ChannelView.Executions": "Запуски",

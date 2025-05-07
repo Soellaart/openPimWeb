@@ -1,9 +1,9 @@
-import { inject, provide, reactive } from '@vue/composition-api';
-import i18n from '../i18n';
-import { generateSorting, objectToGraphgl, serverFetch } from './utils';
-import { currentLanguage } from './languages';
-import * as userStore from './users';
-import * as err from './error';
+import { inject, provide, reactive } from '@vue/composition-api'
+import i18n from '../i18n'
+import { generateSorting, objectToGraphgl, serverFetch } from './utils'
+import { currentLanguage } from './languages'
+import * as userStore from './users'
+import * as err from './error'
 
 const channels = reactive([])
 const channelTypes = reactive([])

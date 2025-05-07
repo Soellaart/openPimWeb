@@ -59,7 +59,7 @@ export default {
   },
   created () {
     // If channel.headerMappings is already set, let's say that means "useMapping = true"
-    if (this.channel.headerMmappings && Object.keys(this.channel.headerMappings).length > 0) {
+    if (this.channel.headerMappings && Object.keys(this.channel.headerMappings).length > 0) {
       this.useMapping = true
     }
   },

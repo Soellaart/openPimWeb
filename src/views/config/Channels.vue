@@ -299,10 +299,12 @@ export default {
     }
 
     const groupedChannels = computed(() => {
+      console.debug(filteredChannels().filter(item => item.group).sort((a, b) => a.order - b.order))
       return filteredChannels().filter(item => item.group).sort((a, b) => a.order - b.order)
     })
 
     const singleChannels = computed(() => {
+      console.debug(filteredChannels().filter(item => !item.group).sort((a, b) => a.order - b.order))
       return filteredChannels().filter(item => !item.group).sort((a, b) => a.order - b.order)
     })
 
@@ -441,6 +443,7 @@ export default {
         saveChannel(selectedRef.value).then(() => {
           showInfo(i18n.t('Saved'))
           const readingTime = new Date(new Date().getTime() + 1000).toISOString()
+          console.debug('selectedRef.value' + JSON.stringify(selectedRef.value))
           updateCategories(selectedRef.value, readingTime)
           const selectedChannel = channelsRef.value.find(chan => chan.id === selectedRef.value.id)
           if (selectedChannel) {
@@ -494,7 +497,7 @@ export default {
       Promise.all([loadAllLanguages(), loadAllChannelTypes(), loadAllChannelsWithMapping()]).then(() => {
         clearSelection()
         types.value = types.value.filter(elem => channelTypes.includes(elem.value))
-
+        console.debug('types.value' + JSON.stringify(types.value))
         const id = router.currentRoute.params.id
         if (id) {
           const channel = channelsRef.value.find((elem) => elem.identifier === id)
