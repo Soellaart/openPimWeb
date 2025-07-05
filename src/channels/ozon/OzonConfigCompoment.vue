@@ -84,7 +84,7 @@ export default {
           const group = groups[i]
           for (var j = 0; j < group.attributes.length; j++) {
             const attr = group.attributes[j]
-            attr.text = attr.identifier + ' (' + attr.name.ru + ')'
+            attr.text = attr.identifier + ' (' + attr.name.en + ')'
             arr.push(attr)
           }
         }

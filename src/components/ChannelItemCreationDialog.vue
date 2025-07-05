@@ -83,7 +83,7 @@ export default {
       const node = findNode(identifierSelectedRef.value, categories.tree.children)
       const newItem = newItemRef.value
       newItem.identifier = node.id
-      newItem.name.ru = node.name
+      newItem.name.en = node.name
       newItem.typeIdentifier = typeRef.value
       newItem.children = []
       let type = findTypeByIdentifier(newItem.typeIdentifier).node
