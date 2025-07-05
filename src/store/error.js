@@ -6,7 +6,9 @@ const state = reactive({
   info: '',
   hasInfo: computed(() => (state.info !== '')),
   information: '',
-  hasInformation: computed(() => state.information !== '')
+  hasInformation: computed(() => state.information !== ''),
+  confirmation: null,
+  hasConfirmation: computed(() => state.confirmation !== null)
 })
 
 const actions = {
@@ -24,6 +26,10 @@ const actions = {
   showInformation: (msg) => {
     state.information = msg
     setTimeout(() => { state.information = '' }, 60000)
+  },
+  clearConfirmation: () => { state.confirmation = null },
+  showConfirmation: ({ message, onConfirm, onCancel }) => {
+    state.confirmation = { message, onConfirm, onCancel }
   }
 }
 

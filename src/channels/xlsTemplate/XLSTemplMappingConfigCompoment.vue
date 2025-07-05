@@ -208,6 +208,7 @@ import * as attrStore from '../../store/attributes'
 import * as langStore from '../../store/languages'
 import ValidVisibleComponent from '../../components/ValidVisibleComponent'
 import i18n from '../../i18n'
+import { nextTick } from 'vue'
 
 export default {
   props: {
@@ -259,7 +260,11 @@ export default {
 
     function showExpression (attr) {
       exprAttrRef.value = attr
-      exprDialogRef.value = true
+      nextTick(() => {
+        if (!exprDialogRef.value) {
+          exprDialogRef.value = true
+        }
+      })
     }
 
     function showOptions (attr) {
@@ -363,7 +368,7 @@ export default {
           const group = groups[i]
           for (var j = 0; j < group.attributes.length; j++) {
             const attr = group.attributes[j]
-            arr.push({ value: attr.identifier, text: attr.identifier + ' - ' + attr.name?.ru })
+            arr.push({ value: attr.identifier, text: attr.identifier + ' - ' + attr.name?.en })
           }
         }
         allAttributes.value = arr

@@ -49,6 +49,20 @@
       </v-btn>
     </div>
   </v-snackbar>
+  <v-dialog v-model="hasConfirmation" persistent max-width="500px">
+    <v-card>
+      <v-card-title class="text-h6">
+        {{ confirmation?.message || 'Are you sure?' }}
+      </v-card-title>
+
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn text color="grey" @click="cancelConfirmation">{{ $t('Cancel') }}</v-btn>
+        <v-btn text color="primary" @click="confirmConfirmation">{{ $t('Confirm') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
 </div>
 
 </template>
@@ -58,11 +72,26 @@ import * as errorStore from '../store/error'
 export default {
   setup () {
     const {
-      state: { error, hasError, info, hasInfo, information, hasInformation },
+      state: { error, hasError, info, hasInfo, information, hasInformation, confirmation, hasConfirmation },
       clearError,
       clearInfo,
-      clearInformation
+      clearInformation,
+      clearConfirmation
     } = errorStore.useStore()
+
+    function confirmConfirmation () {
+      if (confirmation.value && typeof confirmation.value.onConfirm === 'function') {
+        confirmation.value.onConfirm()
+      }
+      clearConfirmation()
+    }
+
+    function cancelConfirmation () {
+      if (confirmation.value && typeof confirmation.value.onCancel === 'function') {
+        confirmation.value.onCancel()
+      }
+      clearConfirmation()
+    }
 
     return {
       error,
@@ -73,7 +102,11 @@ export default {
       hasInformation,
       clearError,
       clearInfo,
-      clearInformation
+      clearInformation,
+      confirmation,
+      hasConfirmation,
+      confirmConfirmation,
+      cancelConfirmation
     }
   }
 }

@@ -47,7 +47,7 @@
               </v-card>
 
     <TypeSelectionDialog ref="typeSelectionDialogRef" :multiselect="true" @selected="typesSelected"/>
-    <ItemsSelectionDialog ref="itemSelectionDialogRef" @selected="itemsSelected"/>
+    <ItemsSelectionDialog ref="itemSelectionDialogRef" :multiselect="true" @selected="itemsSelected"/>
   </div>
 </template>
 <script>
@@ -110,22 +110,22 @@ export default {
       typeSelectionDialogRef.value.showDialog('valid', props.elem.valid)
     }
 
-    function typesSelected (arr) {
+    function typesSelected (selectedTypes) {
       typeSelectionDialogRef.value.closeDialog()
-      props.elem.valid = arr
+      props.elem.valid = selectedTypes
     }
 
     function addVisible () {
       itemSelectionDialogRef.value.showDialog('visible')
     }
 
-    function itemsSelected (id) {
+    function itemsSelected (ids) {
       itemSelectionDialogRef.value.closeDialog()
-      const tst = props.elem.visible.find(elem => elem === id)
-      if (!tst) {
-        props.elem.visible.push(id)
-        loadItemsByIds([id], false).then(items => {
-          visible.value.push(items[0])
+      const newIds = ids.filter(id => !props.elem.visible.includes(id))
+      props.elem.visible.push(...newIds)
+      if (newIds.length > 0) {
+        loadItemsByIds(newIds, false).then(items => {
+          visible.value.push(...items)
         })
       }
     }

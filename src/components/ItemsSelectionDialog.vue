@@ -26,7 +26,7 @@
                 <v-tab-item>  <!-- search -->
                   <v-text-field @keydown.enter.prevent="searchEnterPressed" v-model="searchTextRef" @input="searchChanged" :label="$t('Search')" append-icon="mdi-magnify" class="ml-5 mr-5"></v-text-field>
                   <v-list dense v-if="searchResultsRef && searchResultsRef.length > 0">
-                    <v-list-item-group v-model="searchSelectedRef" color="primary">
+                    <v-list-item-group v-model="searchSelectedRef" multiple color="primary">
                       <v-list-item v-for="(elem, i) in searchResultsRef" :key="i" dense>
                         <v-list-item-content>
                           <v-list-item-title><a @click="selectItem(i)">{{elem.identifier + ' (' +elem.type.identifier+')'}}</a></v-list-item-title>
@@ -99,12 +99,14 @@ export default {
         }
       }
     }
+
     function searchEnterPressed () {
       if (awaitingSearch) {
         clearTimeout(awaitingSearch)
       }
       performSearch()
     }
+
     function performSearch () {
       const typesExpr = typesFilter.value && typesFilter.value.length > 0 ? '{typeId: {OP_in: ' + JSON.stringify(typesFilter.value) + '}}' : ''
       searchItem(searchTextRef.value, typesExpr).then(data => {
@@ -113,18 +115,33 @@ export default {
     }
 
     function selectItem (idx) {
-      searchSelectedRef.value = idx
-      selected()
+      const item = searchResultsRef.value[idx]
+      if (!selectedItemsRef.value.includes(item.id)) {
+        selectedItemsRef.value.push(item.id)
+      }
     }
 
     function selected () {
-      if (selectedItemsRef.value[0]) {
-        const id = selectedItemsRef.value[0]
-        const node = findItem(id).node
-        emit('selected', node.internalId, initiator)
-      } else if (searchSelectedRef.value != null) {
-        emit('selected', parseInt(searchResultsRef.value[searchSelectedRef.value].id), initiator)
+      const selectedIds = new Set()
+      if (selectedItemsRef.value && selectedItemsRef.value.length > 0) {
+        selectedItemsRef.value.forEach(id => {
+          const node = findItem(id).node
+          if (node) selectedIds.add(node.internalId)
+        })
       }
+      if (Array.isArray(searchSelectedRef.value)) {
+        searchSelectedRef.value.forEach(i => {
+          const item = searchResultsRef.value[i]
+          if (item) selectedIds.add(parseInt(item.id))
+        })
+      } else if (searchSelectedRef.value != null) {
+        const item = searchResultsRef.value[searchSelectedRef.value]
+        if (item) selectedIds.add(parseInt(item.id))
+      }
+      if (selectedIds.size > 0) {
+        emit('selected', Array.from(selectedIds), initiator)
+      }
+      selectionDialogRef.value = false
     }
 
     function showDialog (init, typesToFilter, searchTabActive) {
@@ -150,10 +167,7 @@ export default {
     }
 
     function onSelect (arr) {
-      if (arr && arr.length > 1) {
-        const val = arr[arr.length - 1]
-        selectedItemsRef.value = [val]
-      }
+      selectedItemsRef.value = arr
     }
 
     async function loadChildren (item) {

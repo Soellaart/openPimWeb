@@ -1,69 +1,41 @@
 <template>
-  <div class="ftp-config">
+  <v-form ref="formRef" v-model="formValid" lazy-validation class="ftp-config">
     <h2>FTP Channel Configuration</h2>
 
-    <div class="field">
-      <label>Host:</label>
-      <input v-model="channel.config.ftpHost" placeholder="sftp.example.com" />
+    <v-text-field v-model="channel.config.ftpHost" :rules="ftpHostRules" label="Host" placeholder="sftp.example.com" required />
+    <v-text-field v-model="channel.config.ftpPort" type="number" :rules="ftpPortRules" label="Port" placeholder="22" required />
+    <v-text-field v-model="channel.config.ftpUser" :rules="ftpUserRules" label="Username" required />
+    <v-text-field
+      v-model="channel.config.ftpPassword"
+      :type="showPassword ? 'text' : 'password'"
+      :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+      @click:append="showPassword = !showPassword"
+      :rules="ftpPasswordRules"
+      label="Password"
+      required
+    />
+    <v-text-field v-model="channel.config.ftpRemoteDir" :rules="ftpRemoteDirRules" label="Remote Dir" placeholder="/some/path" required />
+    <v-text-field v-model="channel.config.remoteFilename" :rules="remoteFilenameRules" label="Remote Filename" placeholder="import.csv or export.csv" required />
+
+    <v-checkbox v-model="useMapping" label="Enable Custom Headers Mapping?" />
+
+    <div v-if="useMapping">
+      <v-btn @click="openMappingModal">Edit Header Mapping</v-btn>
     </div>
-    <div class="field">
-      <label>Port:</label>
-      <input type="number" v-model="channel.config.ftpPort" placeholder="22" />
-    </div>
-    <div class="field">
-      <label>Username:</label>
-      <input v-model="channel.config.ftpUser" />
-    </div>
-    <div class="field">
-      <label>Password:</label>
-      <input type="password" v-model="channel.config.ftpPassword" />
-    </div>
-    <div class="field">
-      <label>Remote Dir:</label>
-      <input v-model="channel.config.ftpRemoteDir" placeholder="/some/path" />
-    </div>
-    <div class="field">
-      <label>Remote Filename:</label>
-      <input v-model="channel.config.remotefilename" placeholder="import.csv or export.csv" />
+    <div v-if="!useMapping">
+      <v-btn @click="closeMappingModal">Edit Header Mapping</v-btn>
     </div>
 
     <div class="field">
-      <label>Enable Custom Headers Mapping?</label>
-      <input type="checkbox" v-model="useMapping" />
-    </div>
 
-    <div v-if="useMapping" class="field">
-      <button @click="openMappingModal">Edit Header Mapping</button>
-    </div>
-
-    <div class="field">
-      <label>Edit Configuration:</label>
-      <v-tooltip bottom v-if="!mappingSaved">
-        <template v-slot:activator="{ on, attrs }">
-      <span v-bind="attrs" v-on="on">
-        <button disabled class="disabled-button">Edit Configuration</button>
-      </span>
-        </template>
-        <span>Save first</span>
-      </v-tooltip>
-      <button
-        v-else
-        @click="goToConfiguration"
-      >Edit Configuration</button>
-    </div>
-
-    <div class="field">
-      <label>Test Configuration:</label>
-      <button @click="testConfiguration">Test</button>
     </div>
 
     <ExtMapMappingConfigComponent
       v-if="showMapping"
       :channel="channel"
       @close="onMappingClose"
-      @mapping-saved="onMappingSaved"
     />
-  </div>
+  </v-form>
 </template>
 
 <script>
@@ -82,18 +54,8 @@ export default {
     return {
       useMapping: false,
       showMapping: false,
-      mappingSaved: false,
-      channel: {
-        config: {
-          ftpHost: '',
-          ftpPort: 22,
-          ftpUser: '',
-          ftpPassword: '',
-          ftpRemoteDir: '',
-          remotefilename: ''
-        },
-        headerMappings: {}
-      }
+      formValid: false,
+      showPassword: false
     }
   },
   created () {
@@ -105,45 +67,57 @@ export default {
     openMappingModal () {
       this.showMapping = true
     },
+    closeMappingModal () {
+      this.showMapping = false
+    },
     onMappingClose () {
       this.showMapping = false
     },
-    onMappingSaved () {
-      this.mappingSaved = true
-    },
-    goToConfiguration () {
-      // Add your config navigation logic here
-      alert('Opening configuration panel...')
-    },
-    async testConfiguration () {
-      try {
-        // Save the channel configuration
-        await this.saveChannel()
-
-        // Run the test to check if the file is found and get headers
-        const response = await fetch(`/api/testConfiguration?channelId=${this.channel.id}`)
-        if (response.ok) {
-          const headers = await response.json()
-          alert('File found! Headers retrieved.')
-          // Navigate to the edit configuration page with headers
-          this.goToConfigurationWithHeaders(headers)
-        } else {
-          alert('File not found or error occurred.')
+    scrollToFirstInvalid () {
+      this.$nextTick(() => {
+        const invalid = this.$el.querySelector('.v-input--has-state .v-messages__message')
+        if (invalid) invalid.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    }
+  },
+  computed: {
+    ftpHostRules () {
+      return [
+        v => !!v || 'Host is required',
+        v => {
+          const ipRegex = /^(?:(?:\d{1,3}\.){3}\d{1,3})$/ // IPv4
+          const ipv6Regex = /^(([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4})$/ // IPv6
+          const hostnameRegex = /^(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})$/ // Domain
+          return ipRegex.test(v) || ipv6Regex.test(v) || hostnameRegex.test(v) || 'Invalid host (must be IP or domain)'
         }
-      } catch (error) {
-        console.error('Test failed:', error)
-        alert('An error occurred during the test.')
-      }
+      ]
     },
-    async saveChannel () {
-      // Logic to save the channel configuration
-      console.log('Saving channel configuration...')
-      // Add your save logic here
+    ftpPortRules () {
+      return [
+        v => !!v || 'Port is required',
+        v => /^\d+$/.test(v) || 'Port must be numeric',
+        v => (v >= 1 && v <= 65535) || 'Port must be between 1 and 65535'
+      ]
     },
-    goToConfigurationWithHeaders (headers) {
-      // Logic to navigate to the edit configuration page with headers
-      console.log('Navigating to configuration with headers:', headers)
-      // Add your navigation logic here
+    ftpUserRules () {
+      return [
+        v => !!v || 'Username is required'
+      ]
+    },
+    ftpPasswordRules () {
+      return [
+        v => !!v || 'Password is required'
+      ]
+    },
+    ftpRemoteDirRules () {
+      return [
+        v => !!v || 'Remote directory is required'
+      ]
+    },
+    remoteFilenameRules () {
+      return [
+        v => !!v || 'Remote filename is required'
+      ]
     }
   }
 }
@@ -151,14 +125,14 @@ export default {
 
 <style scoped>
 .ftp-config {
-  max-width: 500px;
+  max-width: 600px;
 }
 .field {
   margin-bottom: 1rem;
 }
 label {
   display: inline-block;
-  width: 120px;
+  width: 140px;
   font-weight: bold;
 }
 .disabled-button {

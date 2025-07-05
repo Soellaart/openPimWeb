@@ -145,7 +145,7 @@
                 </template>
               </v-radio-group>
 
-              <v-select v-if="(selectedRef.config.start && selectedRef.config.start !== 1) || (selectedRef.config.syncStart && selectedRef.config.syncStart !== 1)" v-model="selectedRef.config.language" :items="languages" :readonly="!canEditConfigRef" :label="$t('Config.Channels.Language')" item-text="name.ru" item-value='identifier' clearable></v-select>
+              <v-select v-if="(selectedRef.config.start && selectedRef.config.start !== 1 ) || (selectedRef.config.syncStart && selectedRef.config.syncStart !== 1)" v-model="selectedRef.config.language" :items="languages" :readonly="!canEditConfigRef" :label="$t('Config.Channels.Language')" item-text="name.en" item-value='identifier' clearable></v-select>
 
               <ValidVisibleComponent :elem="selectedRef" :canEditConfig="canEditConfigRef"/>
 
@@ -160,6 +160,7 @@
           <OptionsTable v-if="selectedRef.config.options" :options="selectedRef.config.options" @changed="optionsChanged" />
 
           <v-btn class="mr-4" v-if="canEditConfigRef" @click="save">{{ $t('Save') }}</v-btn>
+          <v-btn class="mr-4" v-if="canEditConfigRef" @click="test">{{ $t('Test') }}</v-btn>
           <v-menu :close-on-content-click="false" offset-y v-if="canEditConfigRef && !selectedRef.group">
             <template v-slot:activator="{ on }"><v-btn class="mr-4" v-on="on"> {{ $t('Move') }}</v-btn></template>
             <v-card class="pa-4">
@@ -218,6 +219,7 @@ export default {
       channelTypes,
       addChannel,
       saveChannel,
+      testChannel,
       removeChannel,
       loadAllChannelsWithMapping,
       loadAllChannelTypes
@@ -380,7 +382,7 @@ export default {
     const connectGroups = computed(() => {
       const filteredGroups = groupedChannels.value.filter(group => parseInt(group.id) !== selectedRef.value.parentId)
       if (filteredGroups && selectedRef.value.parentId) {
-        filteredGroups.push({ id: 0, name: { ru: 'Убрать из группы', en: 'Remove from the group' } })
+        filteredGroups.push({ id: 0, name: { en: 'Remove from the group' } })
       }
       return filteredGroups
     })
@@ -405,11 +407,9 @@ export default {
       Object.keys(oldChannel.mappings).forEach(mapping => {
         if (Object.prototype.hasOwnProperty.call(changesChannel.mappings, mapping)) {
           if (JSON.stringify(oldChannel.mappings[mapping]) !== JSON.stringify(changesChannel.mappings[mapping])) {
-            // changed
             changesChannel.mappings[mapping].changed = true
           }
         } else {
-          // removed
           changesChannel.mappings[mapping].changed = true
         }
       })
@@ -458,6 +458,37 @@ export default {
         })
       } else {
         isSaving = false
+      }
+    }
+
+    let isTestedSucces = false
+
+    function test () {
+      if (isTestedSucces) return
+      isTestedSucces = true
+      selectedRef.value.parentId = selectedRef.value.parentId ? selectedRef.value.parentId : 0
+      if (formRef.value.validate()) {
+        findChanges(oldChannel.value, selectedRef.value)
+        testChannel(selectedRef.value).then((data) => {
+          showInfo((i18n.t('Tested')) + ':' + i18n.t(data.testSavedChannel.message))
+          const headers = data.testSavedChannel.headers
+          this.$emit('headersExtracted', headers)
+          const readingTime = new Date(new Date().getTime() + 1000).toISOString()
+          console.debug('selectedRef.value' + JSON.stringify(selectedRef.value))
+          updateCategories(selectedRef.value, readingTime)
+          const selectedChannel = channelsRef.value.find(chan => chan.id === selectedRef.value.id)
+          if (selectedChannel) {
+            selectedChannel.identifier = selectedRef.value.identifier
+            selectedChannel.id = selectedRef.value.internalId
+            selectedChannel.internalId = selectedRef.value.internalId
+            selectedChannel.order = selectedRef.value.order
+          }
+        }).finally(() => {
+          isTestedSucces = false
+          oldChannel.value = JSON.parse(JSON.stringify(selectedRef.value))
+        })
+      } else {
+        isTestedSucces = false
       }
     }
 
@@ -545,6 +576,7 @@ export default {
       remove,
       move,
       save,
+      test,
       currentLanguage,
       defaultLanguageIdentifier,
       types,

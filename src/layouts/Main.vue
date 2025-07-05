@@ -58,12 +58,19 @@
             <template v-if="header.value == 'title' || header.value == 'status'">{{item[header.value]}}</template>
             <template v-if="header.value === 'log'">
               <v-row>
-              <v-col><v-tooltip top v-if="item">
-                <template v-slot:activator="{ on }">
-                  <v-btn icon v-on="on" @click="showLog(item)"><v-icon>mdi-message-outline</v-icon></v-btn>
-                </template>
-                <span>{{ $t('ExecutionsTable.ViewDetails') }}</span>
-              </v-tooltip></v-col></v-row>
+                <v-col>
+                  <span tabindex="-1">
+                    <v-tooltip top v-if="item">
+                      <template v-slot:activator="{ on }">
+                        <v-btn icon v-on="on" @click="showLog(item)">
+                          <v-icon>mdi-message-outline</v-icon>
+                        </v-btn>
+                      </template>
+                      <span>{{ $t('ExecutionsTable.ViewDetails') }}</span>
+                    </v-tooltip>
+                  </span>
+                </v-col>
+              </v-row>
             </template>
             <template v-if="header.value === 'storagePath'">
               <a v-if="item.storagePath" :href="damUrl + 'asset-process/' + item.id + '?token=' + token">{{ item.fileName ? item.fileName : 'file.bin' }}</a>
@@ -114,12 +121,12 @@
 
     <AppHeader :export="isExportSearch" :drawer="drawer" :drawerRight="drawerRight"/>
 
-    <v-content>
+    <v-main>
       <v-container class="fill-height pa-2 ma-0 width:100%" fluid>
         <router-view :export="isExportSearch"></router-view>
       </v-container>
-    </v-content>
-    <v-dialog v-model="userDialogRef" persistent max-width="600px">
+    </v-main>
+    <v-dialog v-model="userDialogRef" persistent max-width="600px" :retain-focus="false">
       <v-card v-if="currentUserRef">
         <v-card-title>
           <span class="headline">{{ $t('User.Details') }}</span>
@@ -390,9 +397,9 @@ export default {
 
         logDialogRef.value = true
         const result = await loadProcessesByFilter(options, where)
-        logRef.value = result.rows[0]?.log || 'Лог отсутствует'
+        logRef.value = result.rows[0]?.log || 'Log is missing'
       } catch (error) {
-        console.error('Ошибка загрузки логов:', error)
+        console.error('Error loading logs:', error)
       }
     }
 
@@ -452,14 +459,17 @@ export default {
       })
 
       eventBus.on('drawer_triggered', val => {
+        console.info('drawer_triggered', val)
         drawer.value = val
       })
 
       eventBus.on('drawer_triggered_right', val => {
+        console.info('drawer_triggered_right', val)
         drawerRight.value = val
       })
 
       eventBus.on('userDialogRef_triggered', val => {
+        console.info('userDialogRef_triggered', val)
         userDialogRef.value = val
       })
     })

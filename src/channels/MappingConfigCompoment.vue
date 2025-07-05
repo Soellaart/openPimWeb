@@ -4,7 +4,7 @@
       <v-col cols="11">
               <v-card class="mb-5 mt-2">
                 <v-card-title class="subtitle-2 font-weight-bold" >
-                  <div style="width:90%">Зависимости для изображений</div>
+                  <div style="width:90%">Image dependencies</div>
                   <v-tooltip bottom v-if="!readonly">
                     <template v-slot:activator="{ on }">
                       <v-btn icon v-on="on" @click="editRelations"><v-icon>mdi-file-document-edit-outline</v-icon></v-btn>
@@ -25,7 +25,7 @@
       <v-col cols="11">
               <v-card class="mb-5 mt-2">
                 <v-card-title class="subtitle-2 font-weight-bold" >
-                  <div style="width:90%">Зависимости для видео</div>
+                  <div style="width:90%">Video dependencies</div>
                   <v-tooltip bottom v-if="!readonly">
                     <template v-slot:activator="{ on }">
                       <v-btn icon v-on="on" @click="editVideoRelations"><v-icon>mdi-file-document-edit-outline</v-icon></v-btn>
@@ -46,7 +46,7 @@
       <v-col cols="11">
               <v-card class="mb-5 mt-2">
                 <v-card-title class="subtitle-2 font-weight-bold" >
-                  <div style="width:90%">Зависимости для видеообложек</div>
+                  <div style="width:90%">Video Cover Dependencies</div>
                   <v-tooltip bottom v-if="!readonly">
                     <template v-slot:activator="{ on }">
                       <v-btn icon v-on="on" @click="editVideoCoverRelations"><v-icon>mdi-file-document-edit-outline</v-icon></v-btn>
@@ -65,8 +65,8 @@
     </v-row>
     <v-row v-if="variants">
       <v-col cols="11">
-        <v-checkbox v-model="channel.config.variantsSupport" label="Поддержка вариантов" required></v-checkbox>
-        <v-text-field v-if= "channel.config.variantsSupport" v-model="channel.config.variantExpr" dense class="ml-5" label="Выражение для определения вариант или нет" />
+        <v-checkbox v-model="channel.config.variantsSupport" label="Variant support" required></v-checkbox>
+        <v-text-field v-if= "channel.config.variantsSupport" v-model="channel.config.variantExpr" dense class="ml-5" label="Expression to determine whether it is an option or not" />
       </v-col>
     </v-row>
     <v-row>
@@ -77,24 +77,24 @@
           <v-row>
             <v-col cols="11">
               <ValidVisibleComponent :elem="categoryRef" :canEditConfig="!readonly"/>
-              <v-select clearable class="mb-5" v-model="categoryRef.visibleRelation" item-text="name.ru" item-value="id" :items="relations" label="Зависимость связывающая товар и видимо от"></v-select>
+              <v-select clearable class="mb-5" v-model="categoryRef.visibleRelation" item-text="name.en" item-value="id" :items="relations" label="Dependency connecting the product and apparently from"></v-select>
             </v-col>
             <v-col cols="1">
               <v-tooltip bottom>
                 <template v-slot:activator="{ on }">
                   <v-btn icon v-on="on" @click="relCategoryDialogRef.showDialog()"><v-icon>mdi-content-copy</v-icon></v-btn>
                 </template>
-                <span>Скопировать настройки из другой категории</span>
+                <span>Copy settings from another category</span>
               </v-tooltip>
             </v-col>
           </v-row>
-          <v-textarea :rows="1" :readonly="readonly" v-model="categoryRef.categoryExpr" label="Выражение для определения категории" required/>
+          <v-textarea :rows="1" :readonly="readonly" v-model="categoryRef.categoryExpr" label="Expression for defining a category" required/>
           <v-row>
             <v-col cols="6">
-              <v-autocomplete @input="lovChanged" item-text="name.ru" item-value='identifier' v-model="categoryRef.categoryAttr" :items="lovAttributes" :readonly="readonly" label="Атрибут где находится категория маркетплейса" clearable/>
+              <v-autocomplete @input="lovChanged" item-text="name.en" item-value='identifier' v-model="categoryRef.categoryAttr" :items="lovAttributes" :readonly="readonly" label="Attribute where the marketplace category is located" clearable/>
             </v-col>
             <v-col cols="6">
-              <v-autocomplete item-text="value.ru" item-value='id' v-model="categoryRef.categoryAttrValue" :items="categoryLovValues" :readonly="readonly" label="Значение атрибута" clearable/>
+              <v-autocomplete item-text="value.en" item-value='id' v-model="categoryRef.categoryAttrValue" :items="categoryLovValues" :readonly="readonly" label="Attribute value" clearable/>
             </v-col>
           </v-row>
 
@@ -439,7 +439,7 @@ export default {
 
     function categoryToCopySelected (mapping) {
       relCategoryDialogRef.value.closeDialog()
-      if (confirm('Все настройки атрибутов будут переписаны. Продолжать?')) {
+      if (confirm('All attribute settings will be overwritten. Continue?')) {
         for (let i = 0; i < categoryRef.value.attributes.length; i++) {
           const attr = categoryRef.value.attributes[i]
           const tst = mapping.attributes.find(elem => elem.id === attr.id)
@@ -466,11 +466,11 @@ export default {
         }
         lovAttributes.value = lovArr
 
-        const arr = [{ value: '$id', text: 'Внутренний номер объекта' }, { value: '$parentId', text: 'Внутренний номер родительского объекта' }]
+        const arr = [{ value: '$id', text: 'Internal object number' }, { value: '$parentId', text: 'Internal number of the parent object' }]
         for (let i = 0; i < languages.length; i++) {
           const lang = languages[i]
           const langText = ' (' + (lang.name[currentLanguage.value.identifier] || '[' + lang.name[defaultLanguageIdentifier.value] + ']') + ')'
-          arr.push({ value: '$name#' + lang.identifier, text: 'Наименование объекта' + langText })
+          arr.push({ value: '$name#' + lang.identifier, text: 'Object name' + langText })
         }
 
         const attrs = getAllItemsAttributes()

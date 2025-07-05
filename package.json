@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "installPackages": "npm i",
     "demo": "vue-cli-service serve --port 8080 --host demo.openpim.org",
     "serve": "set NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service serve",
     "build": "set NODE_OPTIONS=--openssl-legacy-provider && node generate-buildno.js && vue-cli-service build",

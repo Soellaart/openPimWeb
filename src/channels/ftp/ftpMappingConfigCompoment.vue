@@ -1,33 +1,46 @@
 <template>
   <div class="ftp-mapping">
     <h2>Header Mapping Configuration</h2>
+    <p>Map the external CSV header to a local item attribute:</p>
 
-    <p>Here, map the external CSV header to the local item attribute:</p>
-
-    <div class="mapping-row" v-for="(localAttr, externalHeader) in localHeaderMap" :key="externalHeader">
+    <div
+      class="mapping-row"
+      v-for="(localAttr, externalHeader) in localHeaderMap"
+      :key="externalHeader"
+    >
       <label>External Header: <strong>{{ externalHeader }}</strong></label>
-      <input
+      <v-autocomplete
         v-model="localHeaderMap[externalHeader]"
+        :items="availableAttributes"
         placeholder="Local Attribute"
+        dense
+        solo
+        clearable
       />
       <button @click="removeHeader(externalHeader)">Remove</button>
     </div>
 
-    <!-- Add new mapping row UI -->
     <div class="add-row">
       <input v-model="newExternal" placeholder="New External Header" />
-      <input v-model="newLocal" placeholder="Local Attribute" />
+      <v-autocomplete
+        v-model="newLocal"
+        :items="availableAttributes"
+        placeholder="Local Attribute"
+        dense
+        solo
+        clearable
+      />
       <button @click="addHeader()">Add</button>
     </div>
 
-    <button @click="saveMapping">Save Mapping</button>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'ExtMapMappingConfigCompoment',
+  name: 'FTPMappingConfigComponent',
   props: {
+    attributes: Array,
     channel: {
       type: Object,
       required: true
@@ -37,14 +50,54 @@ export default {
     return {
       localHeaderMap: {},
       newExternal: '',
-      newLocal: ''
+      newLocal: '',
+      availableAttributes: [],
+      headers: [],
+      selectedAttribute: null
     }
   },
-  created () {
-    // We read the existing channel.headerMappings object, or fallback to an empty object
-    this.localHeaderMap = this.channel.headerMappings || {}
+  async created () {
+    await Promise.all([
+      this.fetchAvailableAttributes(),
+      this.fetchHeadersFromRemoteFile()
+    ])
   },
   methods: {
+    onHeadersExtracted (headers) {
+      this.headers = headers // Update headers
+    },
+    async fetchAvailableAttributes () {
+      try {
+        const response = await fetch('/api/getAttributes')
+        if (response.ok) {
+          this.availableAttributes = await response.json()
+        }
+      } catch (err) {
+        console.error('Attribute fetch failed:', err)
+      }
+    },
+    async fetchHeadersFromRemoteFile () {
+      try {
+        const response = await fetch(`/api/getHeaders?channelId=${this.channel.id}`)
+        if (response.ok) {
+          const headers = await response.json()
+          this.prefillHeaders(headers)
+        } else {
+          this.initEmptyHeaders()
+        }
+      } catch (error) {
+        this.initEmptyHeaders()
+      }
+    },
+    prefillHeaders (headers) {
+      this.localHeaderMap = {}
+      headers.forEach(header => {
+        this.$set(this.localHeaderMap, header, '')
+      })
+    },
+    initEmptyHeaders () {
+      this.localHeaderMap = {}
+    },
     addHeader () {
       if (this.newExternal && this.newLocal) {
         this.$set(this.localHeaderMap, this.newExternal, this.newLocal)
@@ -54,13 +107,13 @@ export default {
     },
     removeHeader (externalHeader) {
       this.$delete(this.localHeaderMap, externalHeader)
-    },
-    saveMapping () {
-      // Save the local map back into the channel object
-      this.channel.headerMappings = { ...this.localHeaderMap }
-      // You might also call an API or emit an event to persist the channel changes
-      this.$emit('close', this.channel)
     }
+  },
+  mounted () {
+    this.$root.$on('headersExtracted', this.onHeadersExtracted)
+  },
+  beforeDestroy () {
+    this.$root.$off('headersExtracted', this.onHeadersExtracted)
   }
 }
 </script>
@@ -70,7 +123,7 @@ export default {
   max-width: 600px;
 }
 .mapping-row {
-  margin-bottom: 8px;
+  margin-bottom: 1rem;
 }
 label {
   display: inline-block;

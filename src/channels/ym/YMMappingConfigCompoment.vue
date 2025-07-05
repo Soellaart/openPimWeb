@@ -12,23 +12,23 @@
 
         <div v-if="categoryIdRef">
           <ValidVisibleComponent v-if="categoryIdRef !== '_default'" :elem="categoryRef" :canEditConfig="!readonly"/>
-          <v-select clearable class="mb-5" v-if="categoryIdRef !== '_default'" v-model="categoryRef.visibleRelation" item-text="name.ru" item-value="id" :items="relations" label="Зависимость связывающая товар и видимо от"></v-select>
+          <v-select clearable class="mb-5" v-if="categoryIdRef !== '_default'" v-model="categoryRef.visibleRelation" item-text="name.en" item-value="id" :items="relations" label="Dependency connecting the product and apparently from"></v-select>
           <v-row>
             <v-col cols="11">
-              <v-select v-model="categoryRef.type" v-if="categoryRef" :items="offerTypes" label="Тип предложения" @change="refreshAttributes()"></v-select>
+              <v-select v-model="categoryRef.type" v-if="categoryRef" :items="offerTypes" label="Offer type" @change="refreshAttributes()"></v-select>
             </v-col>
             <v-col cols="1">
               <v-tooltip bottom>
                 <template v-slot:activator="{ on }">
                   <v-btn icon v-on="on" @click="relCategoryDialogRef.showDialog()"><v-icon>mdi-content-copy</v-icon></v-btn>
                 </template>
-                <span>Скопировать настройки из другой категории</span>
+                <span>Copy settings from another category</span>
               </v-tooltip>
             </v-col>
           </v-row>
           <MappingAttributesCompoment v-if="categoryRef && pimAttributesRef && pimAttributesRef.length > 0" :readonly="readonly"  :channel="channel" :canManageAttributes="canEditConfig('attributes')" :attributes="categoryRef.attributes" :pimAttributes="pimAttributesRef" :channelAttributes="categoryAttributes" />
 
-          <v-autocomplete v-if="categoryRef && pimAttributesRef && pimAttributesRef.length > 0" item-value="internalId" item-text="name.ru" chips multiple v-model="categoryRef.attrGroups" :items="groups" :readonly="readonly" label="Выгружать все атрибуты из групп" clearable />
+          <v-autocomplete v-if="categoryRef && pimAttributesRef && pimAttributesRef.length > 0" item-value="internalId" item-text="name.en" chips multiple v-model="categoryRef.attrGroups" :items="groups" :readonly="readonly" label="Unload all attributes from groups" clearable />
 
           <YMAdditionalParams v-if="categoryRef && categoryRef.params && pimAttributesRef" :headers="paramHeaders" :data="categoryRef.params" :pimAttributesRef="pimAttributesRef" :readonly="readonly"/>
         </div>
@@ -54,13 +54,13 @@
         <v-dialog v-model="dialogRef" persistent max-width="600px">
           <v-card>
             <v-card-title>
-              <span class="headline">Создание новой категории</span>
+              <span class="headline">Create a new category</span>
             </v-card-title>
             <v-card-text>
               <v-container>
                 <v-row>
                   <v-col cols="12">
-                    <v-text-field v-model="newCategoryNameRef" label="Название категории" required></v-text-field>
+                    <v-text-field v-model="newCategoryNameRef" label="Category name" required></v-text-field>
                   </v-col>
                 </v-row>
               </v-container>

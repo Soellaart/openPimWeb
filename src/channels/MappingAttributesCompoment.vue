@@ -100,6 +100,7 @@ import * as attrStore from '../store/attributes'
 import * as errorStore from '../store/error'
 import * as lovStore from '../store/lovs'
 import * as chanStore from '../store/channels'
+import { nextTick } from 'vue'
 
 export default {
   components: { OptionsTable, AttributeManageDialog },
@@ -200,7 +201,11 @@ export default {
 
     function showExpression (attr) {
       exprAttrRef.value = attr
-      exprDialogRef.value = true
+      nextTick(() => {
+        if (!exprDialogRef.value) {
+          exprDialogRef.value = true
+        }
+      })
     }
 
     function showOptions (attr) {

@@ -24,7 +24,7 @@
                 <input v-model="elem.name" :placeholder="$t('OptionsTable.Name')" @change="changed"/>
               </td>
               <td class="pa-1 pr-10" style="width:220px;">
-                <v-select v-model="elem.type" :items="typeSelection" :label="$t('OptionsTable.Type')" @change="changeType(elem)" />
+                <v-select v-model="elem.type" :items="typeSelection" :label="$t('OptionsTable.Type')" @change="changeType(elem)" multiple />
               </td>
               <td class="pa-1" colspan="2">
                 <textarea rows="1"  cols="50" v-model="elem.value" :placeholder="$t('OptionsTable.Value')" @change="changed" :readonly="elem.type !== 1"/>

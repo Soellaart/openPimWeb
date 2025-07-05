@@ -150,6 +150,64 @@ const actions = {
       }`
     await serverFetch(query)
   },
+  testChannel: async (channel) => {
+    if (channel.internalId === 0) {
+      const query = `
+        mutation($config: JSONObject, $mappings: JSONObject)
+        { testChannel(
+        identifier: "` + channel.identifier + '", ' +
+        'name: ' + objectToGraphgl(channel.name) +
+        ', order: ' + channel.order +
+        ', group: ' + channel.group +
+        ', parentId: ' + channel.parentId +
+        ', active: ' + channel.active +
+        ', type: ' + channel.type +
+        ', valid: [' + (channel.valid || []) +
+        '], visible: [' + (channel.visible || []) +
+        '], config: $config, ' +
+        'mappings: $mappings' +
+        `) {
+        success
+        message
+        headers
+        }
+      }`
+
+      const variables = {
+        config: channel.config,
+        mappings: channel.mappings
+      }
+
+      const data = await serverFetch(query, variables)
+      return data
+    } else {
+      const query = `
+        mutation($config: JSONObject, $mappings: JSONObject) { testSavedChannel(id: "` + channel.internalId + '", name: ' + (channel.name ? '' + objectToGraphgl(channel.name) : '') +
+        ', order: ' + channel.order +
+        ', group: ' + channel.group +
+        ', parentId: ' + channel.parentId +
+        ', active: ' + channel.active +
+        ', type: ' + channel.type +
+        ', valid: [' + (channel.valid || []) +
+        '], visible: [' + (channel.visible || []) +
+        '], config: $config, mappings: $mappings' +
+        `)
+        {
+        success
+        message
+        headers
+        }
+      }`
+
+      const variables = {
+        config: channel.config,
+        mappings: channel.mappings
+      }
+
+      const data = await serverFetch(query, variables)
+      return data
+    }
+  },
   getChannelStatus: async (channelId) => {
     const data = await serverFetch('query { getChannelStatus(id: "' + channelId + '") {status count} }')
     return data.getChannelStatus

@@ -160,6 +160,7 @@ import i18n from '@/i18n'
 import * as attrStore from '@/store/attributes'
 import * as langStore from '@/store/languages'
 import * as channelsStore from '@/store/channels'
+import { nextTick } from 'vue'
 
 export default {
   props: {
@@ -387,7 +388,11 @@ export default {
 
     function showExpression (attr) {
       exprAttrRef.value = attr
-      exprDialogRef.value = true
+      nextTick(() => {
+        if (!exprDialogRef.value) {
+          exprDialogRef.value = true
+        }
+      })
     }
 
     function updateMappings () {
