@@ -201,7 +201,7 @@ import OptionsTable from '../../components/OptionsTable'
 
 export default {
   components: { LanguageDependentField, SystemInformation, ExtConfigCompoment, WBConfigCompoment, ValidVisibleComponent, OzonConfigCompoment, YMConfigCompoment, ExtMapConfigCompoment, MDMConfigCompoment, MDMExtConfigCompoment, XLSTemplConfigCompoment, FtpConfigCompoment, OptionsTable },
-  setup (props, { root }) {
+  setup (props, { root, emit }) {
     const { canViewConfig, canEditConfig } = userStore.useStore()
     const {
       showInfo
@@ -471,18 +471,11 @@ export default {
         findChanges(oldChannel.value, selectedRef.value)
         testChannel(selectedRef.value).then((data) => {
           showInfo((i18n.t('Tested')) + ':' + i18n.t(data.testSavedChannel.message))
-          const headers = data.testSavedChannel.headers
-          this.$emit('headersExtracted', headers)
+          const headers = data.testSavedChannel.headers || []
+          console.debug('Emitting headersExtracted event with headers:', headers)
+          emit('headersExtracted', headers)
           const readingTime = new Date(new Date().getTime() + 1000).toISOString()
-          console.debug('selectedRef.value' + JSON.stringify(selectedRef.value))
           updateCategories(selectedRef.value, readingTime)
-          const selectedChannel = channelsRef.value.find(chan => chan.id === selectedRef.value.id)
-          if (selectedChannel) {
-            selectedChannel.identifier = selectedRef.value.identifier
-            selectedChannel.id = selectedRef.value.internalId
-            selectedChannel.internalId = selectedRef.value.internalId
-            selectedChannel.order = selectedRef.value.order
-          }
         }).finally(() => {
           isTestedSucces = false
           oldChannel.value = JSON.parse(JSON.stringify(selectedRef.value))

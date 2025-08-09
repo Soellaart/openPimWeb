@@ -1,7 +1,7 @@
 <template>
   <div class="ftp-mapping">
     <h2>Header Mapping Configuration</h2>
-    <p>Map the external CSV header to a local item attribute:</p>
+    <p>Map external CSV headers to internal attributes:</p>
 
     <div
       class="mapping-row"
@@ -12,108 +12,130 @@
       <v-autocomplete
         v-model="localHeaderMap[externalHeader]"
         :items="availableAttributes"
+        item-text="text"
+        item-value="value"
         placeholder="Local Attribute"
         dense
         solo
         clearable
       />
-      <button @click="removeHeader(externalHeader)">Remove</button>
+      <v-btn icon @click="removeHeader(externalHeader)">
+        <v-icon>mdi-delete</v-icon>
+      </v-btn>
     </div>
 
     <div class="add-row">
-      <input v-model="newExternal" placeholder="New External Header" />
       <v-autocomplete
-        v-model="newLocal"
-        :items="availableAttributes"
-        placeholder="Local Attribute"
+        v-model="newExternal"
+        :items="headers.map(h => ({ text: h, value: h }))"
+        item-text="text"
+        item-value="value"
+        label="New External Header"
         dense
         solo
         clearable
       />
-      <button @click="addHeader()">Add</button>
+      <v-autocomplete
+        v-model="newLocal"
+        :items="availableAttributes"
+        item-text="text"
+        item-value="value"
+        label="Local Attribute"
+        dense
+        solo
+        clearable
+      />
+      <v-btn @click="addHeader" :disabled="!newExternal || !newLocal" color="primary">Add</v-btn>
     </div>
-
   </div>
 </template>
 
 <script>
+import { onMounted, ref, watch } from '@vue/composition-api'
+import * as attrStore from '../../store/attributes'
+import * as langStore from '../../store/languages'
+
 export default {
   name: 'FTPMappingConfigComponent',
   props: {
-    attributes: Array,
     channel: {
       type: Object,
       required: true
-    }
-  },
-  data () {
-    return {
-      localHeaderMap: {},
-      newExternal: '',
-      newLocal: '',
-      availableAttributes: [],
-      headers: [],
-      selectedAttribute: null
-    }
-  },
-  async created () {
-    await Promise.all([
-      this.fetchAvailableAttributes(),
-      this.fetchHeadersFromRemoteFile()
-    ])
-  },
-  methods: {
-    onHeadersExtracted (headers) {
-      this.headers = headers // Update headers
     },
-    async fetchAvailableAttributes () {
-      try {
-        const response = await fetch('/api/getAttributes')
-        if (response.ok) {
-          this.availableAttributes = await response.json()
+    headers: {
+      type: Array,
+      default: () => [] // Default empty array
+    }
+  },
+  setup (props) {
+    const { languages, currentLanguage, defaultLanguageIdentifier } = langStore.useStore()
+    const { loadAllAttributes, getAllItemsAttributes } = attrStore.useStore()
+
+    const localHeaderMap = ref({ ...props.channel.headerMappings || {} })
+    const newExternal = ref('')
+    const newLocal = ref('')
+    const availableAttributes = ref([])
+
+    watch(
+      () => props.headers,
+      (newHeaders) => {
+        console.debug('WATCH: headers updated to', newHeaders)
+        if (Array.isArray(newHeaders) && newHeaders.length > 0) {
+          const plainHeaders = JSON.parse(JSON.stringify(newHeaders)) // Deep clone to remove reactivity
+          plainHeaders.forEach(header => {
+            if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, header)) {
+              localHeaderMap.value = { ...localHeaderMap.value, [header]: '' }
+            }
+          })
         }
-      } catch (err) {
-        console.error('Attribute fetch failed:', err)
+      },
+      { immediate: true }
+    )
+    onMounted(async () => {
+      await loadAllAttributes()
+      const attrs = getAllItemsAttributes()
+      const options = [{ value: '$id', text: 'ID' }, { value: '$parentId', text: 'Parent ID' }]
+
+      for (const lang of languages) {
+        const langText = ` (${lang.name[currentLanguage.value.identifier] || '[' + lang.name[defaultLanguageIdentifier.value] + ']'})`
+        options.push({ value: `$name#${lang.identifier}`, text: `Name${langText}` })
       }
-    },
-    async fetchHeadersFromRemoteFile () {
-      try {
-        const response = await fetch(`/api/getHeaders?channelId=${this.channel.id}`)
-        if (response.ok) {
-          const headers = await response.json()
-          this.prefillHeaders(headers)
+
+      for (const attr of attrs) {
+        const nameText = attr.name[currentLanguage.value.identifier] || '[' + attr.name[defaultLanguageIdentifier.value] + ']'
+        if (attr.languageDependent) {
+          for (const lang of languages) {
+            const langText = ` (${lang.name[currentLanguage.value.identifier] || '[' + lang.name[defaultLanguageIdentifier.value] + ']'})`
+            options.push({ value: `${attr.identifier}#${lang.identifier}`, text: `${nameText}${langText}` })
+          }
         } else {
-          this.initEmptyHeaders()
+          options.push({ value: attr.identifier, text: nameText })
         }
-      } catch (error) {
-        this.initEmptyHeaders()
       }
-    },
-    prefillHeaders (headers) {
-      this.localHeaderMap = {}
-      headers.forEach(header => {
-        this.$set(this.localHeaderMap, header, '')
-      })
-    },
-    initEmptyHeaders () {
-      this.localHeaderMap = {}
-    },
-    addHeader () {
-      if (this.newExternal && this.newLocal) {
-        this.$set(this.localHeaderMap, this.newExternal, this.newLocal)
-        this.newExternal = ''
-        this.newLocal = ''
-      }
-    },
-    removeHeader (externalHeader) {
-      this.$delete(this.localHeaderMap, externalHeader)
+      availableAttributes.value = options
+    })
+    const addHeader = () => {
+      localHeaderMap.value[newExternal.value] = newLocal.value
+      props.channel.headerMappings = { ...localHeaderMap.value }
+      newExternal.value = ''
+      newLocal.value = ''
     }
-  },
-  mounted () {
-    this.$root.$on('headersExtracted', this.onHeadersExtracted)
-  },
-  beforeDestroy () {
-    this.$root.$off('headersExtracted', this.onHeadersExtracted)
+
+    const removeHeader = (externalHeader) => {
+      delete localHeaderMap.value[externalHeader]
+      props.channel.headerMappings = { ...localHeaderMap.value }
+    }
+
+    console.debug('ftpmappingconfigcomponent' + JSON.stringify(localHeaderMap.value))
+
+    return {
+      localHeaderMap,
+      newExternal,
+      newLocal,
+      availableAttributes,
+      addHeader,
+      removeHeader
+    }
   }
 }
 </script>
@@ -123,14 +145,19 @@ export default {
   max-width: 600px;
 }
 .mapping-row {
+  display: flex;
+  align-items: center;
   margin-bottom: 1rem;
 }
 label {
   display: inline-block;
-  width: 160px;
+  width: 180px;
   font-weight: bold;
 }
 .add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
   margin-top: 1rem;
 }
 </style>

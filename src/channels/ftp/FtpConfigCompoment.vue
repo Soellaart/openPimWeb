@@ -30,28 +30,35 @@
 
     </div>
 
-    <ExtMapMappingConfigComponent
+    <ftpMappingConfigComponent
       v-if="showMapping"
       :channel="channel"
+      :headers="localHeaders"
       @close="onMappingClose"
     />
   </v-form>
 </template>
 
 <script>
-import ExtMapMappingConfigComponent from './ftpMappingConfigCompoment.vue'
+import { watch } from '@vue/composition-api'
+import ftpMappingConfigComponent from './ftpMappingConfigCompoment.vue'
 
 export default {
-  name: 'ExtMapConfigComponent',
-  components: { ExtMapMappingConfigComponent },
+  name: 'ftpConfigComponent',
+  components: { ftpMappingConfigComponent },
   props: {
     channel: {
       type: Object,
       required: true
+    },
+    headers: {
+      type: Array,
+      default: () => []
     }
   },
   data () {
     return {
+      localHeaders: [...this.headers],
       useMapping: false,
       showMapping: false,
       formValid: false,
@@ -63,8 +70,31 @@ export default {
       this.useMapping = true
     }
   },
+  setup (props, { root }) {
+    watch(() => props.channel, (chan) => {
+      if (chan && !chan.config.ftpHost) {
+        root.$set(chan.config, 'ftpHost', '')
+      }
+      if (chan && !chan.config.ftpPort) {
+        root.$set(chan.config, 'ftpPort', 22)
+      }
+      if (chan && !chan.config.ftpUser) {
+        root.$set(chan.config, 'ftpUser', '')
+      }
+      if (chan && !chan.config.ftpPassword) {
+        root.$set(chan.config, 'ftpPassword', '')
+      }
+      if (chan && !chan.config.ftpRemoteDir) {
+        root.$set(chan.config, 'ftpRemoteDir', '/')
+      }
+      if (chan && !chan.config.remoteFilename) {
+        root.$set(chan.config, 'remoteFilename', '')
+      }
+    })
+  },
   methods: {
     openMappingModal () {
+      this.localHeaders = Array.isArray(this.headers) ? [...this.headers] : []
       this.showMapping = true
     },
     closeMappingModal () {
@@ -72,53 +102,10 @@ export default {
     },
     onMappingClose () {
       this.showMapping = false
-    },
-    scrollToFirstInvalid () {
-      this.$nextTick(() => {
-        const invalid = this.$el.querySelector('.v-input--has-state .v-messages__message')
-        if (invalid) invalid.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      })
     }
   },
-  computed: {
-    ftpHostRules () {
-      return [
-        v => !!v || 'Host is required',
-        v => {
-          const ipRegex = /^(?:(?:\d{1,3}\.){3}\d{1,3})$/ // IPv4
-          const ipv6Regex = /^(([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4})$/ // IPv6
-          const hostnameRegex = /^(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})$/ // Domain
-          return ipRegex.test(v) || ipv6Regex.test(v) || hostnameRegex.test(v) || 'Invalid host (must be IP or domain)'
-        }
-      ]
-    },
-    ftpPortRules () {
-      return [
-        v => !!v || 'Port is required',
-        v => /^\d+$/.test(v) || 'Port must be numeric',
-        v => (v >= 1 && v <= 65535) || 'Port must be between 1 and 65535'
-      ]
-    },
-    ftpUserRules () {
-      return [
-        v => !!v || 'Username is required'
-      ]
-    },
-    ftpPasswordRules () {
-      return [
-        v => !!v || 'Password is required'
-      ]
-    },
-    ftpRemoteDirRules () {
-      return [
-        v => !!v || 'Remote directory is required'
-      ]
-    },
-    remoteFilenameRules () {
-      return [
-        v => !!v || 'Remote filename is required'
-      ]
-    }
+  beforeDestroy () {
+    this.$root.$off('headersExtracted')
   }
 }
 </script>
