@@ -27,7 +27,7 @@
     <div class="add-row">
       <v-autocomplete
         v-model="newExternal"
-        :items="headers.map(h => ({ text: h, value: h }))"
+        :items="headerChoices"
         item-text="text"
         item-value="value"
         label="New External Header"
@@ -51,7 +51,7 @@
 </template>
 
 <script>
-import { onMounted, ref, watch } from '@vue/composition-api'
+import { computed, onMounted, ref, watch } from '@vue/composition-api'
 import * as attrStore from '../../store/attributes'
 import * as langStore from '../../store/languages'
 
@@ -67,30 +67,72 @@ export default {
       default: () => [] // Default empty array
     }
   },
-  setup (props) {
+  setup (props, { root }) {
     const { languages, currentLanguage, defaultLanguageIdentifier } = langStore.useStore()
     const { loadAllAttributes, getAllItemsAttributes } = attrStore.useStore()
+
+    const cleanKey = (k) => {
+      if (k == null) return ''
+      let s = String(k).trim()
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+        s = s.slice(1, -1).trim()
+      }
+      s = s.replace(/\\"/g, '"').replace(/\\'/g, "'")
+      return s
+    }
+
+    const normalizeMap = (mapObj) => {
+      const merged = {}
+      for (const [k, v] of Object.entries(mapObj || {})) {
+        const nk = cleanKey(k)
+        const val = String(v || '').trim()
+        if (!(nk in merged) || (val && !merged[nk])) merged[nk] = val
+      }
+      return merged
+    }
 
     const localHeaderMap = ref({ ...props.channel.headerMappings || {} })
     const newExternal = ref('')
     const newLocal = ref('')
     const availableAttributes = ref([])
 
+    // Cleaned, unique headers for the dropdown (used in template)
+    const headerChoices = computed(() => {
+      const set = new Set((props.headers || []).map(h => cleanKey(h)).filter(Boolean))
+      return [...set].map(k => ({ text: k, value: k }))
+    })
+
+    watch(
+      localHeaderMap,
+      (map) => {
+        props.channel.headerMappings = { ...map }
+      },
+      { deep: true }
+    )
+
     watch(
       () => props.headers,
       (newHeaders) => {
-        console.debug('WATCH: headers updated to', newHeaders)
+        localHeaderMap.value = normalizeMap(localHeaderMap.value)
+
         if (Array.isArray(newHeaders) && newHeaders.length > 0) {
-          const plainHeaders = JSON.parse(JSON.stringify(newHeaders)) // Deep clone to remove reactivity
-          plainHeaders.forEach(header => {
-            if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, header)) {
-              localHeaderMap.value = { ...localHeaderMap.value, [header]: '' }
+          const plain = JSON.parse(JSON.stringify(newHeaders))
+          for (const h of plain) {
+            const key = cleanKey(h)
+            if (!key) continue
+            if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, key)) {
+            // important for Vue 2 reactivity:
+              root.$set(localHeaderMap.value, key, '')
             }
-          })
+          }
         }
+
+        // push to parent for saving
+        props.channel.headerMappings = { ...localHeaderMap.value }
       },
       { immediate: true }
     )
+
     onMounted(async () => {
       await loadAllAttributes()
       const attrs = getAllItemsAttributes()
@@ -114,8 +156,18 @@ export default {
       }
       availableAttributes.value = options
     })
+
     const addHeader = () => {
-      localHeaderMap.value[newExternal.value] = newLocal.value
+      const ext = cleanKey(newExternal.value)
+      const loc = String(newLocal.value || '').trim()
+      if (!ext) return
+      // ensure reactivity when key didn’t exist:
+      if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, ext)) {
+        root.$set(localHeaderMap.value, ext, loc)
+      } else {
+        localHeaderMap.value[ext] = loc
+      }
+      localHeaderMap.value = normalizeMap(localHeaderMap.value)
       props.channel.headerMappings = { ...localHeaderMap.value }
       newExternal.value = ''
       newLocal.value = ''
@@ -126,13 +178,14 @@ export default {
       props.channel.headerMappings = { ...localHeaderMap.value }
     }
 
-    console.debug('ftpmappingconfigcomponent' + JSON.stringify(localHeaderMap.value))
-
     return {
       localHeaderMap,
       newExternal,
       newLocal,
       availableAttributes,
+      headerChoices,
+      cleanKey,
+      normalizeMap,
       addHeader,
       removeHeader
     }

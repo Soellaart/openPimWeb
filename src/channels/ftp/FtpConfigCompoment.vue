@@ -17,14 +17,8 @@
     <v-text-field v-model="channel.config.ftpRemoteDir" :rules="ftpRemoteDirRules" label="Remote Dir" placeholder="/some/path" required />
     <v-text-field v-model="channel.config.remoteFilename" :rules="remoteFilenameRules" label="Remote Filename" placeholder="import.csv or export.csv" required />
 
-    <v-checkbox v-model="useMapping" label="Enable Custom Headers Mapping?" />
-
-    <div v-if="useMapping">
       <v-btn @click="openMappingModal">Edit Header Mapping</v-btn>
-    </div>
-    <div v-if="!useMapping">
-      <v-btn @click="closeMappingModal">Edit Header Mapping</v-btn>
-    </div>
+      <v-btn @click="closeMappingModal">Close Header Mapping</v-btn>
 
     <div class="field">
 
@@ -58,16 +52,26 @@ export default {
   },
   data () {
     return {
-      localHeaders: [...this.headers],
-      useMapping: false,
+      localHeaders: Array.isArray(this.headers) ? [...this.headers] : [],
       showMapping: false,
       formValid: false,
       showPassword: false
     }
   },
+  watch: {
+    headers (newVal) {
+      this.localHeaders = Array.isArray(newVal) ? [...newVal] : []
+    }
+  },
   created () {
-    if (this.channel.headerMappings && Object.keys(this.channel.headerMappings).length > 0) {
-      this.useMapping = true
+    if (!this.channel.headerMappings) {
+      this.$set(this.channel, 'headerMappings', {})
+    }
+
+    // Check if headerMappings has data
+    if (Object.keys(this.channel.headerMappings).length > 0) {
+      this.localHeaders = Array.isArray(this.headers) ? [...this.headers] : []
+      this.showMapping = true // Open the mapping modal
     }
   },
   setup (props, { root }) {
@@ -103,9 +107,6 @@ export default {
     onMappingClose () {
       this.showMapping = false
     }
-  },
-  beforeDestroy () {
-    this.$root.$off('headersExtracted')
   }
 }
 </script>

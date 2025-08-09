@@ -153,7 +153,7 @@
               <v-checkbox class="ml-2 mt-0" v-model="selectedRef.config.showRemoveButton" :label="$t('Config.Channels.ShowRemoveButton')" required></v-checkbox>
             </v-tab-item>
             <v-tab-item>
-              <component v-if="channelFactory.getConfigCompoment()" :is="channelFactory.getConfigCompoment()" :channel="selectedRef" :readonly="!canEditConfigRef" ></component>
+              <component v-if="channelFactory.getConfigCompoment()" :is="channelFactory.getConfigCompoment()" :channel="selectedRef" :readonly="!canEditConfigRef" :headers="extractedHeaders" ></component>
             </v-tab-item>
           </v-tabs-items>
           </div>
@@ -201,7 +201,7 @@ import OptionsTable from '../../components/OptionsTable'
 
 export default {
   components: { LanguageDependentField, SystemInformation, ExtConfigCompoment, WBConfigCompoment, ValidVisibleComponent, OzonConfigCompoment, YMConfigCompoment, ExtMapConfigCompoment, MDMConfigCompoment, MDMExtConfigCompoment, XLSTemplConfigCompoment, FtpConfigCompoment, OptionsTable },
-  setup (props, { root, emit }) {
+  setup (props, { root }) {
     const { canViewConfig, canEditConfig } = userStore.useStore()
     const {
       showInfo
@@ -241,6 +241,8 @@ export default {
     const oldChannel = ref(null)
     const searchRef = ref('')
     const channelsRef = ref(channels)
+
+    const extractedHeaders = ref([])
 
     function filteredChannels () {
       const arr = channelsRef.value
@@ -360,6 +362,26 @@ export default {
 
         oldChannel.value = JSON.parse(JSON.stringify(val))
         selectedRef.value = val
+        // Hydrate headerMappings from TOP-LEVEL OBJECT headermappings (DB -> UI)
+        if (selectedRef.value && selectedRef.value.headermappings &&
+              typeof selectedRef.value.headermappings === 'object' &&
+              !Array.isArray(selectedRef.value.headermappings)) {
+          const obj = {}
+          for (const [ext, loc] of Object.entries(selectedRef.value.headermappings)) {
+            const k = String(ext || '').trim()
+            const v = String(loc || '').trim()
+            if (k) obj[k] = v
+          }
+          if (!selectedRef.value.headerMappings) {
+            // NOTE: this was a bug in your code; you were setting 'headermappings' here
+            root.$set(selectedRef.value, 'headerMappings', obj)
+          } else {
+            Object.assign(selectedRef.value.headerMappings, obj)
+          }
+        }
+        if (!selectedRef.value.headerMappings) {
+          root.$set(selectedRef.value, 'headerMappings', {})
+        }
         if (selectedRef.value.internalId !== 0 && selectedRef.value.identifier) {
           router.push('/config/channels/' + selectedRef.value.identifier)
         } else {
@@ -440,6 +462,18 @@ export default {
       selectedRef.value.parentId = selectedRef.value.parentId ? selectedRef.value.parentId : 0
       if (formRef.value.validate()) {
         findChanges(oldChannel.value, selectedRef.value)
+        try {
+          const map = selectedRef.value.headerMappings || {}
+
+          const headermappings = Object.fromEntries(
+            Object.entries(map)
+              .map(([ext, loc]) => [String(ext || '').trim(), String(loc || '').trim()])
+              .filter(([ext, loc]) => ext && loc) // only linked pairs
+          )
+          root.$set(selectedRef.value, 'headerMappings', headermappings)
+        } catch (e) {
+          console.error('Failed to build headermappings:', e)
+        }
         saveChannel(selectedRef.value).then(() => {
           showInfo(i18n.t('Saved'))
           const readingTime = new Date(new Date().getTime() + 1000).toISOString()
@@ -460,7 +494,6 @@ export default {
         isSaving = false
       }
     }
-
     let isTestedSucces = false
 
     function test () {
@@ -473,7 +506,8 @@ export default {
           showInfo((i18n.t('Tested')) + ':' + i18n.t(data.testSavedChannel.message))
           const headers = data.testSavedChannel.headers || []
           console.debug('Emitting headersExtracted event with headers:', headers)
-          emit('headersExtracted', headers)
+          extractedHeaders.value = headers
+
           const readingTime = new Date(new Date().getTime() + 1000).toISOString()
           updateCategories(selectedRef.value, readingTime)
         }).finally(() => {
@@ -528,6 +562,23 @@ export default {
           if (channel) {
             if (!channel.config.options) root.$set(channel.config, 'options', [])
             selectedRef.value = channel
+            if (Array.isArray(selectedRef.value?.headermappings)) {
+              const obj = {}
+              for (const row of selectedRef.value.headermappings) {
+                if (row && row.csvIdentifier) {
+                  obj[String(row.csvIdentifier).trim()] = String(row.pimIdentifier || '').trim()
+                }
+              }
+              if (!selectedRef.value.headerMappings) {
+                root.$set(selectedRef.value, 'headerMappings', obj)
+              } else {
+                Object.assign(selectedRef.value.headerMappings, obj)
+              }
+            }
+            // Ensure the object exists for the UI
+            if (!selectedRef.value.headerMappings) {
+              root.$set(selectedRef.value, 'headerMappings', {})
+            }
             oldChannel.value = JSON.parse(JSON.stringify(channel))
             itemRef.value = channel.id
           } else {
@@ -585,6 +636,7 @@ export default {
       updateCategories,
       clearSelection,
       optionsChanged,
+      extractedHeaders,
       identifierRules: [
         v => identifierValidation(v)
       ],
