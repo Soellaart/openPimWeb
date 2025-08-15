@@ -24,6 +24,13 @@
 
     </div>
 
+    <ftpIdConfigComponent
+      v-if="showMapping"
+      :channel="channel"
+      :headers="localHeaders"
+      @close="onMappingClose"
+    />
+
     <ftpMappingConfigComponent
       v-if="showMapping"
       :channel="channel"

@@ -519,6 +519,29 @@ export default {
       }
     }
 
+    function getHeaders () {
+      if (isTestedSucces) return
+      isTestedSucces = true
+      selectedRef.value.parentId = selectedRef.value.parentId ? selectedRef.value.parentId : 0
+      if (formRef.value.validate()) {
+        findChanges(oldChannel.value, selectedRef.value)
+        testChannel(selectedRef.value).then((data) => {
+          showInfo((i18n.t('Tested')) + ':' + i18n.t(data.testSavedChannel.message))
+          const headers = data.testSavedChannel.headers || []
+          console.debug('Emitting headersExtracted event with headers:', headers)
+          extractedHeaders.value = headers
+
+          const readingTime = new Date(new Date().getTime() + 1000).toISOString()
+          updateCategories(selectedRef.value, readingTime)
+        }).finally(() => {
+          isTestedSucces = false
+          oldChannel.value = JSON.parse(JSON.stringify(selectedRef.value))
+        })
+      } else {
+        isTestedSucces = false
+      }
+    }
+
     function remove () {
       if (selectedRef.value.group) {
         if (confirm(i18n.t('Config.Channels.Confirm.DeleteGroup', { name: selectedRef.value.name }))) {
@@ -621,6 +644,7 @@ export default {
       move,
       save,
       test,
+      getHeaders,
       currentLanguage,
       defaultLanguageIdentifier,
       types,

@@ -333,6 +333,13 @@ const actions = {
     } else {
       return await resp.json()
     }
+  },
+  getHeaders: async (channels) => {
+    if (!Array.isArray(channels)) channels = [channels]
+    const query = `
+      query { getHeaders(channels: ` + JSON.stringify(channels) + ') }'
+    const data = await serverFetch(query)
+    return data.getHeaders || []
   }
 }
 
