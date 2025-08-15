@@ -373,7 +373,6 @@ export default {
             if (k) obj[k] = v
           }
           if (!selectedRef.value.headerMappings) {
-            // NOTE: this was a bug in your code; you were setting 'headermappings' here
             root.$set(selectedRef.value, 'headerMappings', obj)
           } else {
             Object.assign(selectedRef.value.headerMappings, obj)
@@ -473,6 +472,16 @@ export default {
           root.$set(selectedRef.value, 'headerMappings', headermappings)
         } catch (e) {
           console.error('Failed to build headermappings:', e)
+        }
+        const csv = String(selectedRef.value.dataIdentifier?.csvIdentifier || '').trim()
+        const pim = String(
+          (csv && selectedRef.value.headerMappings ? selectedRef.value.headerMappings[csv] : '') || ''
+        ).trim()
+
+        if (csv && pim) {
+          root.$set(selectedRef.value, 'dataIdentifier', { csvIdentifier: csv, pimIdentifier: pim })
+        } else {
+          if (selectedRef.value.dataIdentifier) delete selectedRef.value.dataIdentifier
         }
         saveChannel(selectedRef.value).then(() => {
           showInfo(i18n.t('Saved'))

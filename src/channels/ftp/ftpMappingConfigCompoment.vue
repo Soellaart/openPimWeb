@@ -3,26 +3,33 @@
     <h2>Header Mapping Configuration</h2>
     <p>Map external CSV headers to internal attributes:</p>
 
-    <div
-      class="mapping-row"
-      v-for="(localAttr, externalHeader) in localHeaderMap"
-      :key="externalHeader"
-    >
-      <label>External Header: <strong>{{ externalHeader }}</strong></label>
-      <v-autocomplete
-        v-model="localHeaderMap[externalHeader]"
-        :items="availableAttributes"
-        item-text="text"
-        item-value="value"
-        placeholder="Local Attribute"
-        dense
-        solo
-        clearable
-      />
-      <v-btn icon @click="removeHeader(externalHeader)">
-        <v-icon>mdi-delete</v-icon>
-      </v-btn>
-    </div>
+    <v-radio-group v-model="selectedExternal" column>
+      <div
+        class="mapping-row"
+        v-for="(localAttr, externalHeader) in localHeaderMap"
+        :key="externalHeader"
+      >
+        <label>External Header: <strong>{{ externalHeader }}</strong></label>
+        <v-autocomplete
+          v-model="localHeaderMap[externalHeader]"
+          :items="availableAttributes"
+          item-text="text"
+          item-value="value"
+          placeholder="Local Attribute"
+          dense
+          solo
+          clearable
+        />
+        <v-radio
+          :value="externalHeader"
+          :disabled="!String(localHeaderMap[externalHeader] || '').trim()"
+          class="ml-2"
+        />
+        <v-btn icon @click="removeHeader(externalHeader)">
+          <v-icon>mdi-delete</v-icon>
+        </v-btn>
+      </div>
+      </v-radio-group>
 
     <div class="add-row">
       <v-autocomplete
@@ -95,17 +102,71 @@ export default {
     const newExternal = ref('')
     const newLocal = ref('')
     const availableAttributes = ref([])
+    const selectedExternal = ref(props.channel.dataIdentifier?.csvIdentifier || '')
+    console.debug(props.channel)
 
-    // Cleaned, unique headers for the dropdown (used in template)
     const headerChoices = computed(() => {
       const set = new Set((props.headers || []).map(h => cleanKey(h)).filter(Boolean))
       return [...set].map(k => ({ text: k, value: k }))
     })
 
+    const syncDataIdentifier = () => {
+      const csv = String(selectedExternal.value || '').trim()
+      const pim = String((localHeaderMap.value && localHeaderMap.value[csv]) || '').trim()
+      if (csv && pim) {
+        props.channel.dataIdentifier = { csvIdentifier: csv, pimIdentifier: pim }
+      } else {
+        if (props.channel.dataIdentifier) delete props.channel.dataIdentifier
+      }
+    }
+
+    const reselectFromChannel = () => {
+      const di = props.channel?.dataIdentifier
+      if (!di) return
+      const csv = cleanKey(di.csvIdentifier)
+      const pim = String(di.pimIdentifier || '').trim()
+      if (!csv) return
+
+      if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, csv)) {
+        root.$set(localHeaderMap.value, csv, pim)
+      } else if (!localHeaderMap.value[csv] && pim) {
+        localHeaderMap.value[csv] = pim
+      }
+
+      if (String(localHeaderMap.value[csv] || '').trim()) {
+        selectedExternal.value = csv
+      }
+    }
+
+    watch(() => props.channel, () => {
+      // refresh local map from current headerMappings
+      localHeaderMap.value = normalizeMap(props.channel.headerMappings || {})
+      reselectFromChannel()
+    })
+
+    // if only the dataIdentifier changes
+    watch(() => props.channel?.dataIdentifier, () => {
+      reselectFromChannel()
+    }, { deep: true })
+
+    watch(selectedExternal, () => {
+      syncDataIdentifier()
+    })
+
+    watch(localHeaderMap, (map) => {
+      props.channel.headerMappings = { ...map }
+      const sel = String(selectedExternal.value || '').trim()
+      if (sel && !String(map[sel] || '').trim()) {
+        selectedExternal.value = ''
+      }
+      syncDataIdentifier()
+    }, { deep: true })
+
     watch(
       localHeaderMap,
       (map) => {
         props.channel.headerMappings = { ...map }
+        syncDataIdentifier()
       },
       { deep: true }
     )
@@ -121,17 +182,27 @@ export default {
             const key = cleanKey(h)
             if (!key) continue
             if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, key)) {
-            // important for Vue 2 reactivity:
               root.$set(localHeaderMap.value, key, '')
             }
           }
         }
-
-        // push to parent for saving
         props.channel.headerMappings = { ...localHeaderMap.value }
       },
       { immediate: true }
     )
+
+    watch(localHeaderMap, (map) => {
+      props.channel.headerMappings = { ...map }
+      const sel = String(selectedExternal.value || '').trim()
+      if (sel && !String(map[sel] || '').trim()) {
+        selectedExternal.value = ''
+      }
+      syncDataIdentifier()
+    }, { deep: true })
+
+    onMounted(() => {
+      reselectFromChannel()
+    })
 
     onMounted(async () => {
       await loadAllAttributes()
@@ -155,6 +226,20 @@ export default {
         }
       }
       availableAttributes.value = options
+    })
+
+    onMounted(() => {
+      const di = props.channel.dataIdentifier
+      if (di && di.csvIdentifier) {
+        const k = di.csvIdentifier
+        if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, k)) {
+          root.$set(localHeaderMap.value, k, di.pimIdentifier || '')
+        } else if (!localHeaderMap.value[k] && di.pimIdentifier) {
+          localHeaderMap.value[k] = di.pimIdentifier
+        }
+        selectedExternal.value = k
+        props.channel.headerMappings = { ...localHeaderMap.value }
+      }
     })
 
     const addHeader = () => {
@@ -187,7 +272,8 @@ export default {
       cleanKey,
       normalizeMap,
       addHeader,
-      removeHeader
+      removeHeader,
+      selectedExternal
     }
   }
 }

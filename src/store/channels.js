@@ -57,7 +57,7 @@ const actions = {
   },
   loadAllChannelsWithMapping: async () => {
     if (!chanPromiseAll) {
-      chanPromiseAll = serverFetch('query { getChannels {id identifier name order group active type valid visible config mappings headerMappings runtime parentId createdAt createdBy updatedAt updatedBy} }')
+      chanPromiseAll = serverFetch('query { getChannels {id identifier name order group active type valid visible config mappings headerMappings dataIdentifier runtime parentId createdAt createdBy updatedAt updatedBy} }')
     }
     const data = await chanPromiseAll
     const readingTime = new Date().toISOString()
@@ -92,7 +92,7 @@ const actions = {
   saveChannel: async (channel) => {
     if (channel.internalId === 0) {
       const query = `
-        mutation($config: JSONObject, $mappings: JSONObject, $headerMappings: JSONObject) { createChannel(identifier: "` + channel.identifier + '", name: ' + objectToGraphgl(channel.name) +
+        mutation($config: JSONObject, $mappings: JSONObject, $headerMappings: JSONObject, $dataIdentifier: JSONObject) { createChannel(identifier: "` + channel.identifier + '", name: ' + objectToGraphgl(channel.name) +
         ', order: ' + channel.order +
         ', group: ' + channel.group +
         ', parentId: ' + channel.parentId +
@@ -100,21 +100,22 @@ const actions = {
         ', type: ' + channel.type +
         ', valid: [' + (channel.valid || []) +
         '], visible: [' + (channel.visible || []) +
-        '], config: $config, mappings: $mappings, headerMappings: $headerMappings' +
+        '], config: $config, mappings: $mappings, headerMappings: $headerMappings, dataIdentifier: $dataIdentifier' +
         `)
       }`
 
       const variables = {
         config: channel.config,
         mappings: channel.mappings,
-        headerMappings: channel.headerMappings || {}
+        headerMappings: channel.headerMappings || {},
+        dataIdentifier: channel.dataIdentifier || {}
       }
 
       const data = await serverFetch(query, variables)
       channel.internalId = parseInt(data.createChannel)
     } else {
       const query = `
-        mutation($config: JSONObject, $mappings: JSONObject, $headerMappings: JSONObject) { updateChannel(id: "` + channel.internalId + '", name: ' + (channel.name ? '' + objectToGraphgl(channel.name) : '') +
+        mutation($config: JSONObject, $mappings: JSONObject, $headerMappings: JSONObject, $dataIdentifier: JSONObject) { updateChannel(id: "` + channel.internalId + '", name: ' + (channel.name ? '' + objectToGraphgl(channel.name) : '') +
         ', order: ' + channel.order +
         ', group: ' + channel.group +
         ', parentId: ' + channel.parentId +
@@ -122,14 +123,15 @@ const actions = {
         ', type: ' + channel.type +
         ', valid: [' + (channel.valid || []) +
         '], visible: [' + (channel.visible || []) +
-        '], config: $config, mappings: $mappings, headerMappings: $headerMappings' +
+        '], config: $config, mappings: $mappings, headerMappings: $headerMappings, dataIdentifier: $dataIdentifier' +
         `)
       }`
 
       const variables = {
         config: channel.config,
         mappings: channel.mappings,
-        headerMappings: channel.headerMappings || {}
+        headerMappings: channel.headerMappings || {},
+        dataIdentifier: channel.dataIdentifier || {}
       }
 
       await serverFetch(query, variables)
@@ -155,7 +157,7 @@ const actions = {
   testChannel: async (channel) => {
     if (channel.internalId === 0) {
       const query = `
-        mutation($config: JSONObject, $mappings: JSONObject)
+        mutation($config: JSONObject, $mappings: JSONObject )
         { testChannel(
         identifier: "` + channel.identifier + '", ' +
         'name: ' + objectToGraphgl(channel.name) +
