@@ -153,7 +153,14 @@
               <v-checkbox class="ml-2 mt-0" v-model="selectedRef.config.showRemoveButton" :label="$t('Config.Channels.ShowRemoveButton')" required></v-checkbox>
             </v-tab-item>
             <v-tab-item>
-              <component v-if="channelFactory.getConfigCompoment()" :is="channelFactory.getConfigCompoment()" :channel="selectedRef" :readonly="!canEditConfigRef" :headers="extractedHeaders" ></component>
+              <component
+              v-if="channelFactory.getConfigCompoment()"
+              :is="channelFactory.getConfigCompoment()"
+              :channel="selectedRef"
+              :readonly="!canEditConfigRef"
+              :headers="extractedHeaders"
+              :ensure-headers="ensureHeaders"
+              />
             </v-tab-item>
           </v-tabs-items>
           </div>
@@ -221,6 +228,7 @@ export default {
       saveChannel,
       testChannel,
       removeChannel,
+      getHeaders,
       loadAllChannelsWithMapping,
       loadAllChannelTypes
     } = channelsStore.useStore()
@@ -243,6 +251,7 @@ export default {
     const channelsRef = ref(channels)
 
     const extractedHeaders = ref([])
+    const alreadyFetchedOnce = ref(false)
 
     function filteredChannels () {
       const arr = channelsRef.value
@@ -312,80 +321,93 @@ export default {
       return filteredChannels().filter(item => !item.group).sort((a, b) => a.order - b.order)
     })
 
+    const ensureHeaders = async () => {
+      if (!extractedHeaders.value || extractedHeaders.value.length === 0) {
+        await getHeader()
+      }
+    }
+
     function clearSelection () {
       selectedRef.value = null
       itemRef.value = null
     }
 
-    watch(itemRef, (selected, previous) => {
+    watch(itemRef, async (selected, previous) => {
       if (selected == null) {
         selectedRef.value = empty
         return
       }
 
-      let val
+      alreadyFetchedOnce.value = false
 
-      val = groupedChannels.value.find(item => item.id === selected)
-
+      let val = groupedChannels.value.find(item => item.id === selected)
       if (!val) {
         for (const group of groupedChannels.value) {
           val = group.children.find(child => child.id === selected)
           if (val) break
         }
       }
-
       if (!val) {
         val = singleChannels.value.find(item => item.id === selected)
       }
 
-      if (val) {
-        if (previous) {
-          let prevVal = groupedChannels.value.find(item => item.id === previous)
+      if (!val) return
 
-          if (!prevVal) {
-            for (const group of groupedChannels.value) {
-              prevVal = group.children.find(child => child.id === previous)
-              if (prevVal) break
-            }
-          }
-
-          if (!prevVal) {
-            prevVal = singleChannels.value.find(item => item.id === previous)
-          }
-
-          if (prevVal && prevVal.internalId === 0) {
-            showInfo(i18n.t('Config.NotSaved'))
+      // warn about unsaved previous
+      if (previous) {
+        let prevVal = groupedChannels.value.find(item => item.id === previous)
+        if (!prevVal) {
+          for (const group of groupedChannels.value) {
+            prevVal = group.children.find(child => child.id === previous)
+            if (prevVal) break
           }
         }
+        if (!prevVal) prevVal = singleChannels.value.find(item => item.id === previous)
+        if (prevVal && prevVal.internalId === 0) {
+          showInfo(i18n.t('Config.NotSaved'))
+        }
+      }
 
-        if (!val.config.options) { root.$set(val.config, 'options', []) }
+      // ensure config/options exist
+      if (!val.config) root.$set(val, 'config', {})
+      if (!val.config.options) root.$set(val.config, 'options', [])
 
-        oldChannel.value = JSON.parse(JSON.stringify(val))
-        selectedRef.value = val
-        // Hydrate headerMappings from TOP-LEVEL OBJECT headermappings (DB -> UI)
-        if (selectedRef.value && selectedRef.value.headermappings &&
-              typeof selectedRef.value.headermappings === 'object' &&
-              !Array.isArray(selectedRef.value.headermappings)) {
-          const obj = {}
-          for (const [ext, loc] of Object.entries(selectedRef.value.headermappings)) {
-            const k = String(ext || '').trim()
-            const v = String(loc || '').trim()
-            if (k) obj[k] = v
-          }
-          if (!selectedRef.value.headerMappings) {
-            root.$set(selectedRef.value, 'headerMappings', obj)
-          } else {
-            Object.assign(selectedRef.value.headerMappings, obj)
-          }
+      oldChannel.value = JSON.parse(JSON.stringify(val))
+      selectedRef.value = val
+
+      // hydrate from top-level 'headermappings' object (DB -> UI)
+      if (
+        selectedRef.value &&
+        selectedRef.value.headermappings &&
+        typeof selectedRef.value.headermappings === 'object' &&
+        !Array.isArray(selectedRef.value.headermappings)
+      ) {
+        const obj = {}
+        for (const [ext, loc] of Object.entries(selectedRef.value.headermappings)) {
+          const k = String(ext || '').trim()
+          const v = String(loc || '').trim()
+          if (k) obj[k] = v
         }
         if (!selectedRef.value.headerMappings) {
-          root.$set(selectedRef.value, 'headerMappings', {})
-        }
-        if (selectedRef.value.internalId !== 0 && selectedRef.value.identifier) {
-          router.push('/config/channels/' + selectedRef.value.identifier)
+          root.$set(selectedRef.value, 'headerMappings', obj)
         } else {
-          router.push('/config/channels')
+          Object.assign(selectedRef.value.headerMappings, obj)
         }
+      }
+
+      // ensure UI map exists (even if empty)
+      if (!selectedRef.value.headerMappings) {
+        root.$set(selectedRef.value, 'headerMappings', {})
+      }
+
+      // now that headerMappings is finalized, fetch headers once if needed
+      await fetchHeadersIfNeeded()
+
+      // route
+      if (selectedRef.value.internalId !== 0 && selectedRef.value.identifier) {
+        router.push('/config/channels/' + selectedRef.value.identifier)
+      } else {
+        router.push('/config/channels')
       }
     })
 
@@ -528,27 +550,15 @@ export default {
       }
     }
 
-    function getHeaders () {
-      if (isTestedSucces) return
-      isTestedSucces = true
+    async function getHeader () {
       selectedRef.value.parentId = selectedRef.value.parentId ? selectedRef.value.parentId : 0
-      if (formRef.value.validate()) {
-        findChanges(oldChannel.value, selectedRef.value)
-        testChannel(selectedRef.value).then((data) => {
-          showInfo((i18n.t('Tested')) + ':' + i18n.t(data.testSavedChannel.message))
-          const headers = data.testSavedChannel.headers || []
-          console.debug('Emitting headersExtracted event with headers:', headers)
-          extractedHeaders.value = headers
-
-          const readingTime = new Date(new Date().getTime() + 1000).toISOString()
-          updateCategories(selectedRef.value, readingTime)
-        }).finally(() => {
-          isTestedSucces = false
-          oldChannel.value = JSON.parse(JSON.stringify(selectedRef.value))
-        })
-      } else {
-        isTestedSucces = false
-      }
+      const data = await getHeaders(selectedRef.value.id)
+      console.debug(data)
+      const headers = Array.isArray(data)
+        ? data
+        : (data || [])
+      console.debug('Emitting headersExtracted event with headers:', headers)
+      extractedHeaders.value = headers
     }
 
     function remove () {
@@ -579,6 +589,19 @@ export default {
 
     function optionsChanged (val) {
       selectedRef.value.config.options = val
+    }
+
+    const hasAnyHeaderMapping = (chan) => {
+      const map = chan?.headerMappings || {}
+      return Object.keys(map).length > 0
+    }
+
+    const fetchHeadersIfNeeded = async () => {
+      if (!selectedRef.value) return
+      if (!hasAnyHeaderMapping(selectedRef.value)) return
+      if (alreadyFetchedOnce.value) return
+      alreadyFetchedOnce.value = true
+      await getHeader()
     }
 
     onMounted(() => {
@@ -616,6 +639,7 @@ export default {
           } else {
             router.push('/config/channels')
           }
+          fetchHeadersIfNeeded()
         }
       })
     })
@@ -653,7 +677,8 @@ export default {
       move,
       save,
       test,
-      getHeaders,
+      getHeader,
+      ensureHeaders,
       currentLanguage,
       defaultLanguageIdentifier,
       types,

@@ -336,12 +336,9 @@ const actions = {
       return await resp.json()
     }
   },
-  getHeaders: async (channels) => {
-    if (!Array.isArray(channels)) channels = [channels]
-    const query = `
-      query { getHeaders(channels: ` + JSON.stringify(channels) + ') }'
-    const data = await serverFetch(query)
-    return data.getHeaders || []
+  getHeaders: async (channelId) => {
+    const data = await serverFetch('query { getHeaders(channelId: "' + channelId + '") { success headers} }')
+    return data.getHeaders?.headers || []
   }
 }
 

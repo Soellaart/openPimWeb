@@ -35,6 +35,7 @@
       v-if="showMapping"
       :channel="channel"
       :headers="localHeaders"
+      :ensure-headers="ensureHeaders"
       @close="onMappingClose"
     />
   </v-form>
@@ -48,14 +49,10 @@ export default {
   name: 'ftpConfigComponent',
   components: { ftpMappingConfigComponent },
   props: {
-    channel: {
-      type: Object,
-      required: true
-    },
-    headers: {
-      type: Array,
-      default: () => []
-    }
+    channel: { type: Object, required: true },
+    readonly: { type: Boolean, default: false },
+    headers: { type: Array, default: () => [] },
+    ensureHeaders: { type: Function, default: null }
   },
   data () {
     return {
@@ -75,10 +72,9 @@ export default {
       this.$set(this.channel, 'headerMappings', {})
     }
 
-    // Check if headerMappings has data
     if (Object.keys(this.channel.headerMappings).length > 0) {
       this.localHeaders = Array.isArray(this.headers) ? [...this.headers] : []
-      this.showMapping = true // Open the mapping modal
+      this.showMapping = true
     }
   },
   setup (props, { root }) {
@@ -104,8 +100,9 @@ export default {
     })
   },
   methods: {
-    openMappingModal () {
+    async openMappingModal () {
       this.localHeaders = Array.isArray(this.headers) ? [...this.headers] : []
+      await this.onExternalHeaderOpen()
       this.showMapping = true
     },
     closeMappingModal () {
@@ -113,6 +110,12 @@ export default {
     },
     onMappingClose () {
       this.showMapping = false
+    },
+    async onExternalHeaderOpen () {
+      if (this.ensureHeaders && (!this.headers || this.headers.length === 0)) {
+        await this.ensureHeaders()
+        this.localHeaders = Array.isArray(this.headers) ? [...this.headers] : []
+      }
     }
   }
 }

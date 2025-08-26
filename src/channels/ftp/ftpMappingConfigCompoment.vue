@@ -41,7 +41,22 @@
         dense
         solo
         clearable
-      />
+        @focus="onHeaderOpen"
+        @click="onHeaderOpen"
+        @update:menu="v => { if (v) onHeaderOpen() }"
+        >
+        <template v-slot:no-data>
+           <div class="d-flex align-center justify-center pa-3" style="min-height: 48px;">
+             <v-progress-circular
+               v-if="fetchingHeaders"
+               indeterminate
+               color="primary"
+               size="24"
+             />
+             <span v-else>No headers available</span>
+           </div>
+        </template>
+        </v-autocomplete>
       <v-autocomplete
         v-model="newLocal"
         :items="availableAttributes"
@@ -71,7 +86,11 @@ export default {
     },
     headers: {
       type: Array,
-      default: () => [] // Default empty array
+      default: () => []
+    },
+    ensureHeaders: {
+      type: Function,
+      default: null
     }
   },
   setup (props, { root }) {
@@ -122,19 +141,66 @@ export default {
 
     const reselectFromChannel = () => {
       const di = props.channel?.dataIdentifier
-      if (!di) return
-      const csv = cleanKey(di.csvIdentifier)
-      const pim = String(di.pimIdentifier || '').trim()
-      if (!csv) return
-
-      if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, csv)) {
-        root.$set(localHeaderMap.value, csv, pim)
-      } else if (!localHeaderMap.value[csv] && pim) {
-        localHeaderMap.value[csv] = pim
+      if (di && di.csvIdentifier) {
+        const csv = cleanKey(di.csvIdentifier)
+        const pim = String(di.pimIdentifier || '').trim()
+        if (csv) {
+          if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, csv)) {
+            root.$set(localHeaderMap.value, csv, pim)
+          } else if (!localHeaderMap.value[csv] && pim) {
+            localHeaderMap.value[csv] = pim
+          }
+          if (String(localHeaderMap.value[csv] || '').trim()) {
+            selectedExternal.value = csv
+            return
+          }
+        }
       }
+      selectFirstValid()
+    }
 
-      if (String(localHeaderMap.value[csv] || '').trim()) {
-        selectedExternal.value = csv
+    const selectFirstValid = () => {
+      for (const [ext, loc] of Object.entries(localHeaderMap.value || {})) {
+        const csv = cleanKey(ext)
+        const pim = String(loc || '').trim()
+        if (csv && pim) {
+          selectedExternal.value = csv
+          return true
+        }
+      }
+      return false
+    }
+
+    const addHeader = () => {
+      const ext = cleanKey(newExternal.value)
+      const loc = String(newLocal.value || '').trim()
+      if (!ext) return
+      if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, ext)) {
+        root.$set(localHeaderMap.value, ext, loc)
+      } else {
+        localHeaderMap.value[ext] = loc
+      }
+      localHeaderMap.value = normalizeMap(localHeaderMap.value)
+      props.channel.headerMappings = { ...localHeaderMap.value }
+      newExternal.value = ''
+      newLocal.value = ''
+    }
+
+    const removeHeader = (externalHeader) => {
+      delete localHeaderMap.value[externalHeader]
+      props.channel.headerMappings = { ...localHeaderMap.value }
+    }
+
+    const fetchingHeaders = ref(false)
+
+    const onHeaderOpen = async () => {
+      if (!props.ensureHeaders) return
+      if (Array.isArray(props.headers) && props.headers.length > 0) return
+      try {
+        fetchingHeaders.value = true
+        await props.ensureHeaders()
+      } finally {
+        fetchingHeaders.value = false
       }
     }
 
@@ -187,15 +253,19 @@ export default {
           }
         }
         props.channel.headerMappings = { ...localHeaderMap.value }
-      },
-      { immediate: true }
-    )
+        if (!String(selectedExternal.value || '').trim()) {
+          selectFirstValid()
+        }
+      }, { immediate: true })
 
     watch(localHeaderMap, (map) => {
       props.channel.headerMappings = { ...map }
       const sel = String(selectedExternal.value || '').trim()
       if (sel && !String(map[sel] || '').trim()) {
         selectedExternal.value = ''
+      }
+      if (!selectedExternal.value) {
+        selectFirstValid()
       }
       syncDataIdentifier()
     }, { deep: true })
@@ -242,27 +312,6 @@ export default {
       }
     })
 
-    const addHeader = () => {
-      const ext = cleanKey(newExternal.value)
-      const loc = String(newLocal.value || '').trim()
-      if (!ext) return
-      // ensure reactivity when key didn’t exist:
-      if (!Object.prototype.hasOwnProperty.call(localHeaderMap.value, ext)) {
-        root.$set(localHeaderMap.value, ext, loc)
-      } else {
-        localHeaderMap.value[ext] = loc
-      }
-      localHeaderMap.value = normalizeMap(localHeaderMap.value)
-      props.channel.headerMappings = { ...localHeaderMap.value }
-      newExternal.value = ''
-      newLocal.value = ''
-    }
-
-    const removeHeader = (externalHeader) => {
-      delete localHeaderMap.value[externalHeader]
-      props.channel.headerMappings = { ...localHeaderMap.value }
-    }
-
     return {
       localHeaderMap,
       newExternal,
@@ -273,7 +322,9 @@ export default {
       normalizeMap,
       addHeader,
       removeHeader,
-      selectedExternal
+      selectedExternal,
+      onHeaderOpen,
+      fetchingHeaders
     }
   }
 }
