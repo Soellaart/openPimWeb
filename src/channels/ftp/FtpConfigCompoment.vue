@@ -15,7 +15,7 @@
       required
     />
     <v-text-field v-model="channel.config.ftpRemoteDir" :rules="ftpRemoteDirRules" label="Remote Dir" placeholder="/some/path" required />
-    <v-text-field v-model="channel.config.remoteFilename" :rules="remoteFilenameRules" label="Remote Filename" placeholder="import.csv or export.csv" required />
+    <v-text-field v-model="channel.config.remoteFilename" :rules="remoteFilenameRules" label="Remote Filename" placeholder="test.csv or export.csv" required />
 
       <v-btn @click="openMappingModal">Edit Header Mapping</v-btn>
       <v-btn @click="closeMappingModal">Close Header Mapping</v-btn>

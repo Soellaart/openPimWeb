@@ -43,7 +43,7 @@ const actions = {
     return channels
   },
   loadAllChannels: async () => {
-    if (!chanPromise) chanPromise = serverFetch('query { getChannels {id identifier name order group active type valid visible config runtime parentId createdAt createdBy updatedAt updatedBy} }')
+    if (!chanPromise) chanPromise = serverFetch('query { getChannels {id identifier name order group active type valid visible config runtime dataIdentifier parentId createdAt createdBy updatedAt updatedBy} }')
     const data = await chanPromise
     if (channels.length > 0) return channels
     if (data.getChannels) {
@@ -85,7 +85,22 @@ const actions = {
     const name = {}
     const id = Date.now()
     name[currentLanguage.value.identifier] = group ? i18n.t('Config.Channels.NewGroupName') : i18n.t('Config.Channels.NewName')
-    const newChan = { id, language: currentLanguage.value.identifier, internalId: 0, name, order: 0, group, active: false, type: 0, valid: [], visible: [], config: { start: 1 }, mappings: {}, runtime: {}, parentId }
+    const newChan = {
+      id,
+      language: currentLanguage.value.identifier,
+      internalId: 0,
+      name,
+      order: 0,
+      group,
+      active: false,
+      type: 0,
+      valid: [],
+      visible: [],
+      config: { start: 1 },
+      mappings: {},
+      runtime: {},
+      parentId
+    }
     channels.push(newChan)
     return newChan
   },
