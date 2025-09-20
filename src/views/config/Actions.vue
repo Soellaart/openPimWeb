@@ -118,6 +118,16 @@
                         {{ $t('Config.Actions.Triggers.Type.LOV') }}
                         ({{ displayEvent(trigger.event) }})
                       </div>
+                      <div v-if="trigger.type === 9">
+                        {{ $t('Config.Actions.Triggers.ButtonsWithText', {text: trigger.itemButton}) }}
+                        <router-link :to="'/config/types/' + type.identifier">{{ type.identifier }}</router-link>
+                        {{ $t('Config.Actions.Triggers.Item2') }}
+                        <router-link v-if="item" :to="'/item/' + item.identifier">{{ item.identifier }}</router-link>
+                        <br />
+                        {{ $t('Config.Roles') + ': ' }}
+                        {{ roles.map(role => role.name).join(', ') }}
+                        {{ trigger.askBeforeExec ? ' ('+ $t('Config.Actions.Triggers.AskBeforeExec') + ')' : '' }}
+                      </div>
                     </v-list-item-title>
                   </v-list-item-content>
                 </v-list-item>
@@ -132,7 +142,7 @@
         </template>
       </v-col>
     </v-row>
-    <ActionTriggerCreationDialog ref="triggerDialogRef" @created="triggerCreated"></ActionTriggerCreationDialog>
+    <ActionTriggerCreationDialog ref="triggerDialogRef" @created="triggerCreated" />
     <ItemsSelectionDialog ref="itemSelectionDialogRef" @selected="itemSelected"/>
     <template>
       <v-row justify="center">
@@ -242,14 +252,16 @@ export default {
     function triggerCreated (trigger) {
       triggerDialogRef.value.closeDialog()
       selectedRef.value.triggers.push(trigger)
-      if (trigger.type === 1 || trigger.type === 3 || trigger.type === 6) {
+      if (trigger.type === 1 || trigger.type === 3 || trigger.type === 6 || trigger.type === 9) {
         loadItemsByIds([trigger.itemFrom]).then(arr => { itemsRef.value.push(arr[0]) })
       }
     }
 
     function displayEvent (event) {
       event = parseInt(event)
-      if (event === 1) {
+      if (event === 0) {
+        return i18n.t('Config.Actions.Triggers.Event.Always')
+      } else if (event === 1) {
         return i18n.t('Config.Actions.Triggers.Event.BeforeCreate')
       } else if (event === 2) {
         return i18n.t('Config.Actions.Triggers.Event.AfterCreate')
@@ -320,7 +332,7 @@ export default {
       selectedRef.value = action
       const ids = []
       selectedRef.value.triggers.forEach(trigger => {
-        if (trigger.type === 1 || trigger.type === 3 || trigger.type === 6) ids.push(trigger.itemFrom)
+        if (trigger.type === 1 || trigger.type === 3 || trigger.type === 6 || trigger.type === 9) ids.push(trigger.itemFrom)
       })
       loadItemsByIds(ids).then(arr => { itemsRef.value = arr })
       if (action.identifier) router.push('/config/actions/' + action.identifier)

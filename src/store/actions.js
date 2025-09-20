@@ -80,6 +80,18 @@ const actionList = {
     const query = 'mutation { testAction(itemId: "' + itemId + '", actionId: "' + actionId + '") { failed, log, error, compileError, message }}'
     const response = await serverFetch(query)
     return response.testAction
+  },
+  getActionCategories: async (channelId) => {
+    const data = await serverFetch('query { getActionCategories(id: "' + channelId + '") { list {id name} tree } }')
+    return data.getActionCategories
+  },
+  getActionAttributes: async (channelId, categoryId) => {
+    const data = await serverFetch('query { getActionAttributes(channelId: "' + channelId + '", categoryId: "' + categoryId + '") {id name category required dictionary description dictionaryLink dictionaryLinkPost} }')
+    return data.getActionAttributes
+  },
+  getActionAttributeValues: async (channelId, categoryId, attributeId) => {
+    const data = await serverFetch('query { getActionAttributeValues(channelId: "' + channelId + '", categoryId: "' + categoryId + '", attributeId: "' + attributeId + '") }')
+    return data.getActionAttributeValues
   }
 }
 
