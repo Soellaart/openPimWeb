@@ -145,7 +145,7 @@
                 </template>
               </v-radio-group>
 
-              <v-select v-if="(selectedRef.config.start && selectedRef.config.start !== 1 ) || (selectedRef.config.syncStart && selectedRef.config.syncStart !== 1)" v-model="selectedRef.config.language" :items="languages" :readonly="!canEditConfigRef" :label="$t('Config.Channels.Language')" item-text="name.en" item-value='identifier' clearable></v-select>
+              <v-select v-if="(selectedRef.config.start && selectedRef.config.start !== 1 ) || (selectedRef.config.syncStart && selectedRef.config.syncStart !== 1)" v-model="selectedRef.config.language" :items="languages" :readonly="!canEditConfigRef" :label="$t('Config.Channels.Language')" item-text="name.en" item-value='identifier' clearable required></v-select>
 
               <ValidVisibleComponent :elem="selectedRef" :canEditConfig="canEditConfigRef"/>
 
@@ -677,7 +677,6 @@ export default {
       move,
       save,
       test,
-      getHeader,
       ensureHeaders,
       currentLanguage,
       defaultLanguageIdentifier,
@@ -690,8 +689,6 @@ export default {
       languages,
       searchRef,
       oldChannel,
-      findChanges,
-      updateCategories,
       clearSelection,
       optionsChanged,
       extractedHeaders,
